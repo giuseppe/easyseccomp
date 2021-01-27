@@ -1,3 +1,21 @@
+/*
+ * easyseccomp
+ *
+ * Copyright (C) 2021 Giuseppe Scrivano <giuseppe@scrivano.org>
+ * easyseccomp is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * easyseccomp is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with easyseccomp.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <sys/param.h>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -5,6 +23,7 @@
 #include <errno.h>
 #include <error.h>
 #include <stdio.h>
+#include <unistd.h>
 
 /* libseccomp is used to resolve syscall names.  */
 #include <seccomp.h>
@@ -100,15 +119,6 @@ unsigned int arc4random ()
 {
   return random ();
 }
-
-/*
-struct seccomp_data {
-	int nr;
-	__u32 arch;
-	__u64 instruction_pointer;
-	__u64 args[6];
-};
-*/
 
 static int
 resolve_syscall (const char *name)
