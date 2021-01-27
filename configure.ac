@@ -1,7 +1,7 @@
 AC_PREREQ([2.69])
 AC_INIT([easyseccomp], [0.1], [giuseppe@scrivano.org])
-AC_CONFIG_SRCDIR([lexer.l])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_SRCDIR([src/lexer.l])
+AC_CONFIG_HEADERS([src/config.h])
 
 AM_INIT_AUTOMAKE([1.11.2 -Wno-portability foreign tar-ustar no-dist-gzip dist-xz subdir-objects])
 
