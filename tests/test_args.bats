@@ -97,7 +97,7 @@ EOF
     grep "errno: 0" $BATS_TMPDIR/result
 }
 
-@test "test args with bitwise &" {
+@test "test args with bitwise & EQ" {
     cat > $BATS_TMPDIR/program <<EOF
 \$arg0 & 1 == 1 => ERRNO(10);
 => ALLOW();
@@ -111,6 +111,82 @@ EOF
     sim mkdir x86_64 10 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
     grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
     grep "errno: 0" $BATS_TMPDIR/result
+}
+
+@test "test args with bitwise & NEQ" {
+    cat > $BATS_TMPDIR/program <<EOF
+\$arg0 & 1 != 1 => ERRNO(10);
+=> ALLOW();
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    sim mkdir x86_64 3 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
+
+    sim mkdir x86_64 10 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 10" $BATS_TMPDIR/result
+}
+
+@test "test args with bitwise & GE/GT" {
+    cat > $BATS_TMPDIR/program <<EOF
+\$arg0 & 1 > 0 => ERRNO(10);
+=> ALLOW();
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    sim mkdir x86_64 3 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 10" $BATS_TMPDIR/result
+
+    sim mkdir x86_64 10 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
+
+    cat > $BATS_TMPDIR/program <<EOF
+\$arg0 & 1 >= 1 => ERRNO(10);
+=> ALLOW();
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    sim mkdir x86_64 3 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 10" $BATS_TMPDIR/result
+
+    sim mkdir x86_64 10 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
+}
+
+@test "test args with bitwise & LE/LT" {
+    cat > $BATS_TMPDIR/program <<EOF
+\$arg0 & 1 < 1 => ERRNO(10);
+=> ALLOW();
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    sim mkdir x86_64 3 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
+
+    sim mkdir x86_64 10 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 10" $BATS_TMPDIR/result
+
+    cat > $BATS_TMPDIR/program <<EOF
+\$arg0 & 2048 <= 100 => ERRNO(10);
+=> ALLOW();
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    sim mkdir x86_64 2048 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
+
+    sim mkdir x86_64 10 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 10" $BATS_TMPDIR/result
 }
 
 @test "test multiple args in AND" {

@@ -68,12 +68,13 @@ make_and_condition (struct condition_s *and_l, struct condition_s *and_r)
 
 
 struct condition_s *
-make_bitwise_eq_condition (char *name, struct value_s *mask, struct value_s *value)
+make_bitwise_eq_condition (char *name, struct value_s *mask, int op, struct value_s *value)
 {
   struct condition_s *c = xmalloc0 (sizeof (struct condition_s));
   c->type = TYPE_MASKED_EQ;
   c->name = name;
   c->mask = mask;
+  c->mask_op = op;
   c->value = value;
   return c;
 }

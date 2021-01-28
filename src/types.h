@@ -56,6 +56,7 @@ struct condition_s
 {
   int type;
   char *name;
+  int mask_op;
   struct head_s *set;
   struct value_s *mask;
   struct value_s *value;
@@ -77,7 +78,7 @@ struct head_s *make_set (struct value_s *value, struct head_s *next);
 
 struct condition_s *make_condition (int type, char *name, struct value_s *value, struct head_s *set);
 
-struct condition_s *make_bitwise_eq_condition (char *name, struct value_s *mask, struct value_s *value);
+struct condition_s *make_bitwise_eq_condition (char *name, struct value_s *mask, int op, struct value_s *value);
 
 struct condition_s *make_and_condition (struct condition_s *and_l, struct condition_s *and_r);
 

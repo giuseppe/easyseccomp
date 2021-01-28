@@ -283,37 +283,13 @@ read_value (struct value_s *v, int type)
 }
 
 static void
-generate_masked_condition (struct condition_s *c, int jump_len)
+generate_jump (int type, int value, int jump_len)
 {
-  int type;
-  int value;
-  int mask_value;
-
-  type = load_variable (c->name);
-
-  value = read_value (c->value, type);
-  mask_value = read_value (c->mask, type);
-
-  {
-    struct sock_filter stmt[] = {
-      BPF_STMT(BPF_ALU|BPF_AND|BPF_IMM, mask_value),
-      BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, value, 0, jump_len),
-    };
-    emit (stmt, sizeof (stmt));
-  }
-}
-
-static void
-generate_simple_condition (struct condition_s *c, int jump_len)
-{
-  int type;
   int jt = 0;
   int jf = 0;
-  int value;
   int mask;
 
-  type = load_variable (c->name);
-  switch (c->type)
+  switch (type)
     {
     case TYPE_EQ:
       mask = BPF_JEQ;
@@ -346,15 +322,50 @@ generate_simple_condition (struct condition_s *c, int jump_len)
       break;
 
     default:
-      error (EXIT_FAILURE, 0, "invalid condition type %d", c->type);
+      error (EXIT_FAILURE, 0, "invalid condition type %d", type);
     }
-
-  value = read_value (c->value, type);
 
   struct sock_filter stmt[] = {
     BPF_JUMP(BPF_JMP|mask|BPF_K, value, jt, jf),
   };
   emit (stmt, sizeof (struct sock_filter));
+}
+
+static void
+generate_masked_condition (struct condition_s *c, int jump_len)
+{
+  int type;
+  int value;
+  int mask_value;
+
+  type = load_variable (c->name);
+
+  value = read_value (c->value, type);
+  mask_value = read_value (c->mask, type);
+
+  {
+    struct sock_filter stmt[] = {
+      BPF_STMT(BPF_ALU|BPF_AND|BPF_IMM, mask_value),
+    };
+    emit (stmt, sizeof (stmt));
+  }
+
+  generate_jump (c->mask_op, value, jump_len);
+}
+
+static void
+generate_simple_condition (struct condition_s *c, int jump_len)
+{
+  int type;
+  int jt = 0;
+  int jf = 0;
+  int value;
+  int mask;
+
+  type = load_variable (c->name);
+  value = read_value (c->value, type);
+
+  generate_jump (c->type, value, jump_len);
 }
 
 static void
