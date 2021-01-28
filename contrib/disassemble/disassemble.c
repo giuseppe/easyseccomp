@@ -205,7 +205,7 @@ disassemble (int fd, int raw)
 
             case BPF_ALU:
               class = "BPF_ALU";
-              printf ("%s|%s, k=0x%x\n", class, op_alu, f.k);
+              printf ("%s|%s|%s, k=0x%x\n", class, op_alu, src, f.k);
               break;
 
             case BPF_JMP:
