@@ -102,6 +102,7 @@ complex_condition: condition {$$ = $1;}
 | and_condition {$$ = $1;}
 
 and_condition: condition AND condition {$$ = make_and_condition ($1, $3);}
+| condition AND and_condition {$$ = make_and_condition ($1, $3);}
 
 condition: simple_condition {$$ = $1;}
 | LP simple_condition RP {$$ = $2;}
