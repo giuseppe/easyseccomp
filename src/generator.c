@@ -336,12 +336,12 @@ generate_simple_condition (struct condition_s *c, int jump_len)
       break;
 
     case TYPE_LT:
-      mask = BPF_JGT;
+      mask = BPF_JGE;
       jt = jump_len;
       break;
 
     case TYPE_LE:
-      mask = BPF_JGE;
+      mask = BPF_JGT;
       jt = jump_len;
       break;
 
