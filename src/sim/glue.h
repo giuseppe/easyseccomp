@@ -1,3 +1,5 @@
+#include <seccomp.h>
+
 typedef unsigned int u_int;
 typedef unsigned char u_char;
 typedef unsigned short u_short;
@@ -6,4 +8,4 @@ typedef unsigned short u_short;
 
 unsigned int arc4random ();
 
-#define bpf_maxbufsize 16
+#define bpf_maxbufsize (sizeof(struct seccomp_data))
