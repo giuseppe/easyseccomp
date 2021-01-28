@@ -87,7 +87,7 @@ emit (struct sock_filter *filter, size_t len)
 static int
 load_variable (const char *name)
 {
-  int offset;
+  int offset = -1;
   int type = 0;
 
   if (STREQ (name, "$arch"))
@@ -102,32 +102,32 @@ load_variable (const char *name)
     }
   else if (STREQ (name, "$arg0"))
     {
-      offset = syscall_arg(0);
+      offset = syscall_arg (0);
       type = VARIABLE_TYPE_ARG;
     }
   else if (STREQ (name, "$arg1"))
     {
-      offset = syscall_arg(1);
+      offset = syscall_arg (1);
       type = VARIABLE_TYPE_ARG;
     }
   else if (STREQ (name, "$arg2"))
     {
-      offset = syscall_arg(2);
+      offset = syscall_arg (2);
       type = VARIABLE_TYPE_ARG;
     }
   else if (STREQ (name, "$arg3"))
     {
-      offset = syscall_arg(3);
+      offset = syscall_arg (3);
       type = VARIABLE_TYPE_ARG;
     }
   else if (STREQ (name, "$arg4"))
     {
-      offset = syscall_arg(4);
+      offset = syscall_arg (4);
       type = VARIABLE_TYPE_ARG;
     }
   else if (STREQ (name, "$arg5"))
     {
-      offset = syscall_arg(5);
+      offset = syscall_arg (5);
       type = VARIABLE_TYPE_ARG;
     }
   else
@@ -296,10 +296,10 @@ generate_masked_condition (struct condition_s *c, int jump_len)
 
   {
     struct sock_filter stmt[] = {
-      BPF_STMT(BPF_ALU|BPF_AND, mask_value),
-      BPF_JUMP(BPF_JMP|BPF_AND|BPF_K, value, 0, jump_len),
+      BPF_STMT(BPF_ALU|BPF_AND|BPF_IMM, mask_value),
+      BPF_JUMP(BPF_JMP|BPF_JEQ|BPF_K, value, 0, jump_len),
     };
-    emit (stmt, sizeof (struct sock_filter));
+    emit (stmt, sizeof (stmt));
   }
 }
 

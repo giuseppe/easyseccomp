@@ -115,7 +115,7 @@ simple_condition: in_set {$$ = $1;}
 | gt {$$ = $1;}
 | ge {$$ = $1;}
 
-and_bitwise: NAME AND_BITWISE value EQ value {$$ = make_condition (TYPE_MASKED_EQ, $1, $3, NULL);}
+and_bitwise: NAME AND_BITWISE value EQ value {$$ = make_bitwise_eq_condition ($1, $3, $5);}
 eq: NAME EQ value {$$ = make_condition (TYPE_EQ, $1, $3, NULL);}
 neq: NAME NE value {$$ = make_condition (TYPE_NE, $1, $3, NULL);}
 lt: NAME LT value {$$ = make_condition (TYPE_LT, $1, $3, NULL);}

@@ -72,6 +72,7 @@ make_bitwise_eq_condition (char *name, struct value_s *mask, struct value_s *val
 {
   struct condition_s *c = xmalloc0 (sizeof (struct condition_s));
   c->type = TYPE_MASKED_EQ;
+  c->name = name;
   c->mask = mask;
   c->value = value;
   return c;
