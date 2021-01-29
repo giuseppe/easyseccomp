@@ -214,3 +214,19 @@ EOF
     grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
     grep "errno: 10" $BATS_TMPDIR/result
 }
+
+@test "test multiple args in AND and bitwise &" {
+    cat > $BATS_TMPDIR/program <<EOF
+\$arg0 & 10 == 10 && \$arg1 == 20 && \$arg2 & 30 == 30 => ERRNO(40);
+=> ERRNO(10);
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    sim mkdir x86_64 10 20 30 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 40" $BATS_TMPDIR/result
+
+    sim mkdir x86_64 3 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 10" $BATS_TMPDIR/result
+}

@@ -152,7 +152,7 @@ main (int argc, char **argv)
 {
   int i;
 
-  if (isatty (1))
+  if (isatty (1) && getenv ("FORCE_TTY") == NULL)
     error (EXIT_FAILURE, 0, "I refuse to write to a tty.  Redirect the output");
 
   for (i = 1; i < argc; i++)

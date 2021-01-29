@@ -397,6 +397,9 @@ generate_simple_condition (struct condition_s *c, int jump_len)
   int type;
   int value;
 
+  if (c->type == TYPE_MASKED_EQ)
+    return generate_masked_condition (c, jump_len);
+
   type = load_variable (c->name);
   value = read_value (c->value, type);
 
@@ -415,11 +418,9 @@ linearize_and_conditions (struct condition_s *it, struct condition_s **condition
   if (*so_far == max - 1)
     error (EXIT_FAILURE, 0, "AND condition too long");
 
-  if (it->type == TYPE_IN_SET || it->type == TYPE_MASKED_EQ)
+  if (it->type == TYPE_IN_SET || it->type == TYPE_NOT_IN_SET)
     error (EXIT_FAILURE, 0, "complex conditions not supported with AND");
-  if (it->type == TYPE_NOT_IN_SET || it->type == TYPE_MASKED_EQ)
-    error (EXIT_FAILURE, 0, "complex conditions not supported with AND");
-  
+
   conditions[*so_far] = it;
   (*so_far)++;
 }
@@ -429,11 +430,46 @@ generate_and_condition_action (struct condition_s *c, struct action_s *a)
 {
   const int MAX = 8;
   struct condition_s *conditions[MAX];
-  size_t i, total = 0;
+  int conditions_jmp[MAX+1];
+  ssize_t i, total = 0;
 
   linearize_and_conditions (c, conditions, &total, MAX);
+
+  if (total == 0)
+    error (EXIT_FAILURE, 0, "internal error, no AND conditions found");
+
+  conditions_jmp[total - 1] = 1;
+  for (i = total - 2; i >= 0; i--)
+    {
+      int length_op = 0;
+      switch (conditions[i+1]->type)
+        {
+        case TYPE_MASKED_EQ:
+          length_op = 3;
+          break;
+
+        case TYPE_AND:
+        case TYPE_EQ:
+        case TYPE_NE:
+        case TYPE_LT:
+        case TYPE_LE:
+        case TYPE_GT:
+        case TYPE_GE:
+          length_op = 2;
+          break;
+
+        case TYPE_IN_SET:
+        case TYPE_NOT_IN_SET:
+        default:
+          error (EXIT_FAILURE, 0, "internal error, invalid condition type for AND");
+          break;
+        }
+      conditions_jmp[i] = conditions_jmp[i+1] + length_op;
+    }
+
   for (i = 0; i < total; i++)
-    generate_simple_condition (conditions[i], 1 + 2 * (total - 1 - i));
+    generate_simple_condition (conditions[i], conditions_jmp[i]);
+
   generate_action (a);
 }
 
