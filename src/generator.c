@@ -309,6 +309,16 @@ read_value (struct value_s *v, int type)
   return 0;
 }
 
+static void
+generate_jump (int jump_len)
+{
+  struct sock_filter stmt[] = {
+    BPF_JUMP(BPF_JMP|BPF_JA|BPF_K, jump_len, 0, 0),
+  };
+  emit (stmt, sizeof (struct sock_filter));
+
+}
+
 /* generate a jump when the condition is not satisfied.  */
 static void
 generate_inverse_jump (int type, int value, int jump_len)
@@ -437,22 +447,22 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
     {
     case TYPE_NOT_IN_SET:
       {
-        struct condition_s tmp_condition;
         struct head_s *set;
         size_t set_len = 0;
+        int type;
+        int value;
 
         for (set = c->set; set; set = set->next)
           set_len++;
 
+        type = load_variable (c->name);
+
         /* This must be implemented using ranges, but for now
            convert to a series of disequalities.  */
-        memset (&tmp_condition, 0, sizeof (tmp_condition));
-        tmp_condition.type = TYPE_NE;
-        tmp_condition.name = c->name;
         for (set = c->set; set; set = set->next)
           {
-            tmp_condition.value = set->value;
-            generate_simple_condition (&tmp_condition,  2*set_len-1);
+            value = read_value (set->value, type);
+            generate_inverse_jump (TYPE_NE, value, set_len);
             set_len--;
           }
         generate_action (a);
@@ -460,20 +470,26 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
       break;
     case TYPE_IN_SET:
       {
-        struct condition_s tmp_condition;
         struct head_s *set;
+        size_t set_len = 0;
+        int type;
+        int value;
+
+        for (set = c->set; set; set = set->next)
+          set_len++;
+
+        type = load_variable (c->name);
 
         /* This must be implemented using ranges, but for now
            convert to a series of equalities.  */
-        memset (&tmp_condition, 0, sizeof (tmp_condition));
-        tmp_condition.type = TYPE_EQ;
-        tmp_condition.name = c->name;
         for (set = c->set; set; set = set->next)
           {
-            tmp_condition.value = set->value;
-            generate_simple_condition (&tmp_condition, 1);
-            generate_action (a);
+            value = read_value (set->value, type);
+            generate_inverse_jump (TYPE_NE, value, set_len);
+            set_len--;
           }
+        generate_jump (1);
+        generate_action (a);
       }
       break;
 
