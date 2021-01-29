@@ -305,8 +305,9 @@ read_value (struct value_s *v, int type)
 
 }
 
+/* generate a jump when the condition is not satisfied.  */
 static void
-generate_jump (int type, int value, int jump_len)
+generate_inverse_jump (int type, int value, int jump_len)
 {
   int jt = 0;
   int jf = 0;
@@ -373,7 +374,7 @@ generate_masked_condition (struct condition_s *c, int jump_len)
     emit (stmt, sizeof (stmt));
   }
 
-  generate_jump (c->mask_op, value, jump_len);
+  generate_inverse_jump (c->mask_op, value, jump_len);
 }
 
 static void
@@ -388,7 +389,7 @@ generate_simple_condition (struct condition_s *c, int jump_len)
   type = load_variable (c->name);
   value = read_value (c->value, type);
 
-  generate_jump (c->type, value, jump_len);
+  generate_inverse_jump (c->type, value, jump_len);
 }
 
 static void
