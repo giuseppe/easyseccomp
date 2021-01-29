@@ -488,14 +488,14 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         int type;
         int value;
 
+        type = load_variable (c->name);
+
         set_len = set_calculate_len (c->set);
 
         /* Jumps are limited to 8 bits.  This can be fixed with
            an intermediate jump.  */
         if (set_len >= 256)
           error (EXIT_FAILURE, 0, "set too big");
-
-        type = load_variable (c->name);
 
         /* This must be implemented using ranges, but for now
            convert to a series of disequalities.  */
@@ -512,28 +512,32 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
       {
         struct head_s *set;
         size_t set_len = 0;
+        size_t subset_len;
         int type;
         int value;
 
-        set_len = set_calculate_len (c->set);
-
-        /* Jumps are limited to 8 bits.  This can be fixed with
-           an intermediate jump.  */
-        if (set_len >= 256)
-          error (EXIT_FAILURE, 0, "set too big");
-
         type = load_variable (c->name);
 
-        /* This must be implemented using ranges, but for now
-           convert to a series of equalities.  */
-        for (set = c->set; set; set = set->next)
+        set_len = set_calculate_len (c->set);
+
+        /* Jumps are limited to 8 bits.  */
+        while (set_len > 0)
           {
-            value = read_value (set->value, type);
-            generate_inverse_jump (TYPE_NE, value, set_len);
-            set_len--;
+            subset_len = set_len;
+            if (subset_len > 255)
+              subset_len = 255;
+            set_len -= subset_len;
+            /* This must be implemented using ranges, but for now
+               convert to a series of equalities.  */
+            for (set = c->set; set && subset_len > 0; set = set->next)
+              {
+                value = read_value (set->value, type);
+                generate_inverse_jump (TYPE_NE, value, subset_len);
+                subset_len--;
+              }
+            generate_jump (1);
+            generate_action (a);
           }
-        generate_jump (1);
-        generate_action (a);
       }
       break;
 

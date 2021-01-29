@@ -82,15 +82,8 @@ def generate_from(policy):
                     body = "%s => %s;" % (joined_conditions, action)
             else:
                 if len(i['names']) > 1:
-                    remaining = i['names']
-                    while len(remaining) > 0:
-                        subset = remaining[:128]
-                        remaining = remaining[128:]
-                        syscalls = ", ".join(["@%s" % i for i in subset])
-                        body = body + "$syscall in (%s) => %s;" % (syscalls, action)
-                        if len(remaining) > 0:
-                            body = "%s\n" % body
-                          
+                    syscalls = ", ".join(["@%s" % i for i in i['names']])
+                    body = body + "$syscall in (%s) => %s;" % (syscalls, action)
                 else:
                     body = "$syscall == @%s => %s;" % (i['names'][0], action)
             
