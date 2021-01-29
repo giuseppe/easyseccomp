@@ -281,7 +281,7 @@ resolve_syscall (const char *name)
     error (EXIT_FAILURE, 0, "unknown syscall `%s`", name);
 
   if (syscall < 0)
-    error (EXIT_FAILURE, 0, "syscall `%s` is multiplexed", name);
+    return -syscall;
 
   return syscall;
 }
