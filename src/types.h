@@ -77,6 +77,8 @@ struct rule_s
 
 struct head_s *make_set (struct value_s *value, struct head_s *next);
 
+size_t set_calculate_len (struct head_s *set);
+
 struct condition_s *make_condition (int type, char *name, struct value_s *value, struct head_s *set);
 
 struct condition_s *make_bitwise_eq_condition (char *name, struct value_s *mask, int op, struct value_s *value);

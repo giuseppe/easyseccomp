@@ -452,8 +452,12 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         int type;
         int value;
 
-        for (set = c->set; set; set = set->next)
-          set_len++;
+        set_len = set_calculate_len (c->set);
+
+        /* Jumps are limited to 8 bits.  This can be fixed with
+           an intermediate jump.  */
+        if (set_len >= 256)
+          error (EXIT_FAILURE, 0, "set too big");
 
         type = load_variable (c->name);
 
@@ -475,8 +479,12 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         int type;
         int value;
 
-        for (set = c->set; set; set = set->next)
-          set_len++;
+        set_len = set_calculate_len (c->set);
+
+        /* Jumps are limited to 8 bits.  This can be fixed with
+           an intermediate jump.  */
+        if (set_len >= 256)
+          error (EXIT_FAILURE, 0, "set too big");
 
         type = load_variable (c->name);
 

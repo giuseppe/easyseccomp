@@ -45,6 +45,17 @@ make_set (struct value_s *value, struct head_s *next)
   return h;
 }
 
+size_t
+set_calculate_len (struct head_s *set)
+{
+  size_t set_len = 0;
+
+  for (; set; set = set->next)
+    set_len++;
+
+  return set_len;
+}
+
 struct condition_s *
 make_condition (int type, char *name, struct value_s *value, struct head_s *set)
 {
