@@ -99,3 +99,28 @@ EOF
     grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
     grep "errno: 18" $BATS_TMPDIR/result
 }
+
+@test "test syscall@arch" {
+    cat > $BATS_TMPDIR/program <<EOF
+\$arch == @x86_64 && \$syscall == @close@x86_64  => ERRNO(1);
+\$arch == @mipsel && \$syscall == @close@x86_64  => ERRNO(2);
+=> ALLOW();
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    sim close x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 1" $BATS_TMPDIR/result
+
+    sim close mipsel 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+    grep "errno: 2" $BATS_TMPDIR/result
+
+    sim read x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
+
+    sim read mipsel 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
+}

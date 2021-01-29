@@ -232,21 +232,6 @@ generate_action (struct action_s *a)
 }
 
 static int
-resolve_syscall (const char *name)
-{
-  int syscall;
-
-  if (name[0] == '@')
-    name++;
-
-  syscall = seccomp_syscall_resolve_name (name);
-  if (syscall == __NR_SCMP_ERROR)
-    error (EXIT_FAILURE, 0, "unknown syscall `%s`", name);
-
-  return syscall;
-}
-
-static int
 resolve_arch (const char *name)
 {
   int arch;
@@ -259,6 +244,44 @@ resolve_arch (const char *name)
     error (EXIT_FAILURE, 0, "unknown arch `%s`", name);
 
   return arch;
+}
+
+static int
+resolve_syscall (const char *name)
+{
+  char buf[1024];
+  char *arch_sep;
+  int syscall;
+
+  if (name[0] == '@')
+    name++;
+
+  if (strlen (name) > sizeof (buf) -1)
+    error (EXIT_FAILURE, 0, "invalid syscall `%s`", name);
+
+  strcpy (buf, name);
+
+  arch_sep = strchr (name, '@');
+  if (arch_sep == NULL)
+    syscall = seccomp_syscall_resolve_name (name);
+  else
+    {
+      int arch_token;
+
+      *arch_sep = '\0';
+
+      arch_token = resolve_arch (arch_sep + 1);
+
+      syscall = seccomp_syscall_resolve_name_arch (arch_token, name);
+    }
+
+  if (syscall == __NR_SCMP_ERROR)
+    error (EXIT_FAILURE, 0, "unknown syscall `%s`", name);
+
+  if (syscall < 0)
+    error (EXIT_FAILURE, 0, "syscall `%s` is multiplexed", name);
+
+  return syscall;
 }
 
 static int

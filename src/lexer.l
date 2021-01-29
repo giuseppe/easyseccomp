@@ -51,26 +51,27 @@ safe_atoi (char *value)
 %option noyywrap
 
 %%
-"//".*                      {}
-#[ ]*[A-Za-z_][A-Za-z0-9]+  {yylval.str_value = xstrdup (skip_spaces (yytext+1)); return DIRECTIVE;}
-$[A-Za-z_][A-Za-z0-9]*      {yylval.str_value = xstrdup (yytext); return NAME;}
-@[A-Za-z_][A-Za-z_0-9]*     {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
+"//".*                                            {}
+#[ ]*[A-Za-z_][A-Za-z0-9]+                        {yylval.str_value = xstrdup (skip_spaces (yytext+1)); return DIRECTIVE;}
+$[A-Za-z_][A-Za-z0-9]*                            {yylval.str_value = xstrdup (yytext); return NAME;}
+@[A-Za-z_][A-Za-z_0-9]*                           {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
+@[A-Za-z_][A-Za-z_0-9]*@[A-Za-z_][A-Za-z_0-9]*     {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
 [A-Za-z_][A-Z_0-9]+         {yylval.str_value = xstrdup (yytext); return UCASE_NAME;}
-[0-9]+                      {yylval.int_value = safe_atoi (yytext); return NUM;}
-&&                          {return AND;}
-in                          {return IN;}
-==                          {return EQ;}
-!=                          {return NE;}
-\<                          {return LT;}
-\<=                         {return LE;}
->                           {return GT;}
->=                          {return GE;}
-&                           {return AND_BITWISE;}
-=>                          {return THEN;}
-"("                         {return LP;}
-")"                         {return RP;}
-","                         {return COMMA;}
-\;                          {return EOL;}
-[ \t\n]+                    {}
-.                           {error (EXIT_FAILURE, 0, "unrecognized token");}
+[0-9]+                                            {yylval.int_value = safe_atoi (yytext); return NUM;}
+&&                                                {return AND;}
+in                                                {return IN;}
+==                                                {return EQ;}
+!=                                                {return NE;}
+\<                                                {return LT;}
+\<=                                               {return LE;}
+>                                                 {return GT;}
+>=                                                {return GE;}
+&                                                 {return AND_BITWISE;}
+=>                                                {return THEN;}
+"("                                               {return LP;}
+")"                                               {return RP;}
+","                                               {return COMMA;}
+\;                                                {return EOL;}
+[ \t\n]+                                          {}
+.                                                 {error (EXIT_FAILURE, 0, "unrecognized token");}
 %%
