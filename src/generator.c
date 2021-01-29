@@ -159,6 +159,8 @@ get_errno (struct action_s *a)
       return errnos[i].value;
 
   error (EXIT_FAILURE, 0, "unknown errno value `%s`", a->str_value);
+
+  return 0;
 }
 
 static void
@@ -299,10 +301,12 @@ read_value (struct value_s *v, int type)
       return resolve_syscall (v->name);
 
     case VARIABLE_TYPE_ARG:
+
     default:
       error (EXIT_FAILURE, 0, "unknown argument `%s`", v->name);
     }
 
+  return 0;
 }
 
 /* generate a jump when the condition is not satisfied.  */
@@ -381,10 +385,7 @@ static void
 generate_simple_condition (struct condition_s *c, int jump_len)
 {
   int type;
-  int jt = 0;
-  int jf = 0;
   int value;
-  int mask;
 
   type = load_variable (c->name);
   value = read_value (c->value, type);
@@ -437,10 +438,8 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
     case TYPE_NOT_IN_SET:
       {
         struct condition_s tmp_condition;
-        struct value_s tmp_value;
         struct head_s *set;
         size_t set_len = 0;
-        int type, value;
 
         for (set = c->set; set; set = set->next)
           set_len++;
@@ -462,7 +461,6 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
     case TYPE_IN_SET:
       {
         struct condition_s tmp_condition;
-        struct value_s tmp_value;
         struct head_s *set;
 
         /* This must be implemented using ranges, but for now

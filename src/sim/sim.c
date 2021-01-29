@@ -61,15 +61,6 @@ xmalloc (size_t size)
 }
 
 static void *
-xmalloc0 (size_t size)
-{
-  void *res = calloc (1, size);
-  if (UNLIKELY (res == NULL))
-    OOM ();
-  return res;
-}
-
-static void *
 xrealloc (void *ptr, size_t size)
 {
   void *res = realloc (ptr, size);
@@ -84,7 +75,7 @@ read_all_fd (int fd, const char *description, u_char **out, size_t *len)
   int ret;
   size_t nread, allocated;
   off_t size = 0;
-  char *buf = NULL;
+  u_char *buf = NULL;
 
   ret = 4096;
 
