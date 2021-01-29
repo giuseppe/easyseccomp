@@ -1,6 +1,8 @@
 #!/usr/bin/env -S bats
 # -*- mode: sh -*-
 
+load helpers
+
 @test "test ALLOW mkdir with directive" {
     cat > $BATS_TMPDIR/program <<EOF
 #ifdef ALLOW_MKDIR

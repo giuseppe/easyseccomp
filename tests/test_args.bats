@@ -1,6 +1,8 @@
 #!/usr/bin/env -S bats
 # -*- mode: sh -*-
 
+load helpers
+
 @test "test args" {
     cat > $BATS_TMPDIR/program <<EOF
 \$arg0 == 1 => ERRNO(10);

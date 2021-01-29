@@ -1,6 +1,8 @@
 #!/usr/bin/env -S bats
 # -*- mode: sh -*-
 
+load helpers
+
 @test "test arches" {
     cat > $BATS_TMPDIR/program <<EOF
 \$arch == @x86 => ERRNO(1);

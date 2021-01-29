@@ -1,6 +1,8 @@
 #!/usr/bin/env -S bats
 # -*- mode: sh -*-
 
+load helpers
+
 @test "test EPERM" {
     cat > $BATS_TMPDIR/program <<EOF
 // this is a comment to ignore

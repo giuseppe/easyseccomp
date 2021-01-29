@@ -1,6 +1,8 @@
 #!/usr/bin/env -S bats
 # -*- mode: sh -*-
 
+load helpers
+
 @test "test range" {
     cat > $BATS_TMPDIR/program <<EOF
 \$syscall in (@mkdir, @unlink, @close) => ALLOW();
