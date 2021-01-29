@@ -58,6 +58,7 @@ int yyerror (const char *p)
 %token GT
 %token GE
 %token AND_BITWISE
+%token NOT
 %token IN
 %token EOL
 %token LP
@@ -132,6 +133,7 @@ gt: NAME GT value {$$ = make_condition (TYPE_GT, $1, $3, NULL);}
 ge: NAME GE value {$$ = make_condition (TYPE_GE, $1, $3, NULL);}
 
 in_set: NAME IN LP set RP {$$ = make_condition (TYPE_IN_SET, $1, NULL, $4);}
+| NAME NOT IN LP set RP {$$ = make_condition (TYPE_NOT_IN_SET, $1, NULL, $5);}
 
 set: value COMMA set {$$ = make_set ($1, $3);}
 | value {$$ = make_set ($1, NULL);}

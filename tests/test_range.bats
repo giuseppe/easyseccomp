@@ -3,7 +3,7 @@
 
 load helpers
 
-@test "test range" {
+@test "test in set" {
     cat > $BATS_TMPDIR/program <<EOF
 \$syscall in (@mkdir, @unlink, @close) => ALLOW();
 => ERRNO(ENOSYS);
@@ -19,6 +19,24 @@ EOF
     sim mknodat x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
     grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
     grep "errno: 38" $BATS_TMPDIR/result
+}
+
+@test "test not in set" {
+    cat > $BATS_TMPDIR/program <<EOF
+\$syscall not in (@mkdir, @unlink, @close) => ALLOW();
+=> ERRNO(ENOSYS);
+EOF
+    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+
+    for i in mkdir unlink close; do
+        sim $i x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+        grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
+        grep "errno: 38" $BATS_TMPDIR/result
+    done
+
+    sim mknodat x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
+    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
+    grep "errno: 0" $BATS_TMPDIR/result
 }
 
 @test "test multiple ranges" {

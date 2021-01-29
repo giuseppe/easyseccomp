@@ -405,6 +405,8 @@ linearize_and_conditions (struct condition_s *it, struct condition_s **condition
 
   if (it->type == TYPE_IN_SET || it->type == TYPE_MASKED_EQ)
     error (EXIT_FAILURE, 0, "complex conditions not supported with AND");
+  if (it->type == TYPE_NOT_IN_SET || it->type == TYPE_MASKED_EQ)
+    error (EXIT_FAILURE, 0, "complex conditions not supported with AND");
   
   conditions[*so_far] = it;
   (*so_far)++;
@@ -415,11 +417,11 @@ generate_and_condition_action (struct condition_s *c, struct action_s *a)
 {
   const int MAX = 8;
   struct condition_s *conditions[MAX];
-  size_t i, so_far = 0;
+  size_t i, total = 0;
 
-  linearize_and_conditions (c, conditions, &so_far, MAX);
-  for (i = 0; i < so_far; i++)
-    generate_simple_condition (conditions[i], 1 + 2 * (so_far - 1 - i));
+  linearize_and_conditions (c, conditions, &total, MAX);
+  for (i = 0; i < total; i++)
+    generate_simple_condition (conditions[i], 1 + 2 * (total - 1 - i));
   generate_action (a);
 }
 
@@ -431,6 +433,31 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
 
   switch (c->type)
     {
+    case TYPE_NOT_IN_SET:
+      {
+        struct condition_s tmp_condition;
+        struct value_s tmp_value;
+        struct head_s *set;
+        size_t set_len = 0;
+        int type, value;
+
+        for (set = c->set; set; set = set->next)
+          set_len++;
+
+        /* This must be implemented using ranges, but for now
+           convert to a series of disequalities.  */
+        memset (&tmp_condition, 0, sizeof (tmp_condition));
+        tmp_condition.type = TYPE_NE;
+        tmp_condition.name = c->name;
+        for (set = c->set; set; set = set->next)
+          {
+            tmp_condition.value = set->value;
+            generate_simple_condition (&tmp_condition,  2*set_len-1);
+            set_len--;
+          }
+        generate_action (a);
+      }
+      break;
     case TYPE_IN_SET:
       {
         struct condition_s tmp_condition;

@@ -55,10 +55,11 @@ safe_atoi (char *value)
 #[ ]*[A-Za-z_][A-Za-z0-9]+                        {yylval.str_value = xstrdup (skip_spaces (yytext+1)); return DIRECTIVE;}
 $[A-Za-z_][A-Za-z0-9]*                            {yylval.str_value = xstrdup (yytext); return NAME;}
 @[A-Za-z_][A-Za-z_0-9]*                           {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
-@[A-Za-z_][A-Za-z_0-9]*@[A-Za-z_][A-Za-z_0-9]*     {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
-[A-Za-z_][A-Z_0-9]+         {yylval.str_value = xstrdup (yytext); return UCASE_NAME;}
+@[A-Za-z_][A-Za-z_0-9]*@[A-Za-z_][A-Za-z_0-9]*    {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
+[A-Za-z_][A-Z_0-9]+                               {yylval.str_value = xstrdup (yytext); return UCASE_NAME;}
 [0-9]+                                            {yylval.int_value = safe_atoi (yytext); return NUM;}
 &&                                                {return AND;}
+not                                               {return NOT;}
 in                                                {return IN;}
 ==                                                {return EQ;}
 !=                                                {return NE;}

@@ -21,14 +21,15 @@
 # include <string.h>
 
 # define TYPE_IN_SET 1
-# define TYPE_AND 2
-# define TYPE_EQ 3
-# define TYPE_NE 4
-# define TYPE_LT 5
-# define TYPE_LE 6
-# define TYPE_GT 7
-# define TYPE_GE 8
-# define TYPE_MASKED_EQ 9
+# define TYPE_NOT_IN_SET 2
+# define TYPE_AND 3
+# define TYPE_EQ 4
+# define TYPE_NE 5
+# define TYPE_LT 6
+# define TYPE_LE 7
+# define TYPE_GT 8
+# define TYPE_GE 9
+# define TYPE_MASKED_EQ 10
 
 char *xstrdup (char *v);
 void *xmalloc0 (size_t s);
