@@ -27,12 +27,6 @@ $ easyseccomp < profile.seccomp > seccomp.bpf
 $ easyseccomp -d DENY_MKDIR_WITH_EINVAL < profile.seccomp > seccomp.bpf
 ```
 
-# Status
-
-It is just a PoC, barely tested.
-
-The generated BPF is nowhere as good as what libseccomp does.
-
 # Dependencies for OCI containers
 
 it currently requires this feature in crun: https://github.com/containers/crun/pull/578
