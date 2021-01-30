@@ -32,6 +32,10 @@
 /* libseccomp is used to resolve syscall names.  */
 #include <seccomp.h>
 
+#define cleanup_free __attribute__ ((cleanup (cleanup_freep)))
+
+#define min(a, b) ((a < b) ? a : b)
+
 #define STREQ(a,b) (strcmp (a,b) == 0)
 
 #define syscall_arg(_n) (offsetof(struct seccomp_data, args[_n]))
@@ -52,6 +56,13 @@ struct define_s
 };
 
 struct define_s *defines;
+
+static void
+cleanup_freep (void *p)
+{
+  void **pp = (void **) p;
+  free (*pp);
+}
 
 static int
 is_defined (const char *name)
@@ -473,6 +484,34 @@ generate_and_condition_action (struct condition_s *c, struct action_s *a)
   generate_action (a);
 }
 
+static int
+cmp_ints (const void *a, const void *b)
+{
+  int *ia = (int *) a;
+  int *ib = (int *) b;
+
+  return *ia - *ib;
+}
+
+static int
+find_consecutive_range_length (int *values, int size)
+{
+  int i, cur;
+
+  if (size == 0)
+    return 0;
+
+  cur = values[0];
+  for (i = 1; i < size; i++)
+    {
+      if (values[i] != cur + 1)
+        return i;
+
+      cur = values[i];
+    }
+  return size;
+}
+
 static void
 generate_condition_and_action (struct condition_s *c, struct action_s *a)
 {
@@ -497,8 +536,8 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         if (set_len >= 256)
           error (EXIT_FAILURE, 0, "set too big");
 
-        /* This must be implemented using ranges, but for now
-           convert to a series of disequalities.  */
+        /* This could be implemented using ranges similarly to TYPE_IN_SET,
+           but for now convert to a series of disequalities.  */
         for (set = c->set; set; set = set->next)
           {
             value = read_value (set->value, type);
@@ -510,30 +549,72 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
       break;
     case TYPE_IN_SET:
       {
+        cleanup_free int *remaining = NULL;
+        cleanup_free int *values = NULL;
+        size_t remaining_size = 0;
         struct head_s *set;
         size_t set_len = 0;
         size_t subset_len;
+        int *values_it;
         int type;
         int value;
+        int i;
 
         type = load_variable (c->name);
 
         set_len = set_calculate_len (c->set);
 
+        values = xmalloc0 (sizeof (int) * set_len);
+        remaining = xmalloc0 (sizeof (int) * set_len);
+
+        for (set = c->set, i = 0; set; set = set->next, i++)
+          values[i] = read_value (set->value, type);
+
+        qsort (values, set_len, sizeof (int), cmp_ints);
+        values_it = values;
+
         /* Jumps are limited to 8 bits.  */
         while (set_len > 0)
           {
-            subset_len = set_len;
-            if (subset_len > 255)
-              subset_len = 255;
-            set_len -= subset_len;
-            /* This must be implemented using ranges, but for now
-               convert to a series of equalities.  */
-            for (set = c->set; set && subset_len > 0; set = set->next)
+            int range_len;
+
+            range_len = find_consecutive_range_length (values_it, set_len);
+            if (range_len < 3)
               {
-                value = read_value (set->value, type);
-                generate_inverse_jump (TYPE_NE, value, subset_len);
-                subset_len--;
+                /* If the interval is too small, do not solve as a range.  */
+                for (i = 0; i < range_len; i++)
+                  remaining[remaining_size++] = values_it[i];
+              }
+            else
+              {
+                int first_value = values_it[0];
+                int last_value = first_value + range_len - 1;
+                struct sock_filter stmt[] =
+                  {
+                    BPF_JUMP(BPF_JMP|BPF_JGE|BPF_K, first_value, 0, 2),
+                    BPF_JUMP(BPF_JMP|BPF_JGT|BPF_K, last_value, 1, 0),
+                  };
+                emit (stmt, sizeof (stmt));
+                generate_action (a);
+              }
+
+            values_it += range_len;
+            set_len -= range_len;
+          }
+
+        set_len = remaining_size;
+        values_it = remaining;
+
+        /* Jumps are limited to 8 bits.  */
+        while (set_len > 0)
+          {
+            subset_len = min (set_len, 255);
+            set_len -= subset_len;
+
+            for (i = 0; i < subset_len; i++)
+              {
+                value = *(values_it++);
+                generate_inverse_jump (TYPE_NE, value, subset_len - i);
               }
             generate_jump (1);
             generate_action (a);

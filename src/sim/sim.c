@@ -114,7 +114,13 @@ unsigned int arc4random ()
 static int
 resolve_syscall (const char *name)
 {
+  char *endptr = NULL;
   int syscall;
+
+  errno = 0;
+  syscall = strtol (name, &endptr, 10);
+  if (errno == 0 && *endptr == '\0')
+    return syscall;
 
   syscall = seccomp_syscall_resolve_name (name);
   if (syscall == __NR_SCMP_ERROR)
@@ -126,7 +132,13 @@ resolve_syscall (const char *name)
 static int
 resolve_arch (const char *name)
 {
+  char *endptr = NULL;
   int arch;
+
+  errno = 0;
+  arch = strtol (name, &endptr, 10);
+  if (errno == 0 && *endptr == '\0')
+    return arch;
 
   arch = seccomp_arch_resolve_name (name);
   if (arch == 0)
