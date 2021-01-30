@@ -23,6 +23,55 @@
 #include <stdio.h>
 #include <error.h>
 #include <stdlib.h>
+#include <argp.h>
+
+
+const char *argp_program_version = "easyseccomp";
+const char *argp_program_bug_address = "<giuseppe@scrivano.org>";
+static char doc[] = "easyseccomp - easily generate seccomp bpf";
+static char args_doc[] = "[OPTION..]";
+static struct argp_option options[] =
+  {
+    {"define", 'd', 0, 0, "Define a symbol (used for #if(n)def directives)"},
+    {0}
+  };
+
+static char *
+argp_mandatory_argument (char *arg, struct argp_state *state)
+{
+  if (arg)
+    return arg;
+  return state->argv[state->next++];
+}
+
+static error_t
+parse_opt (int key, char *arg, struct argp_state *state)
+{
+  struct arguments *arguments = state->input;
+
+  switch (key)
+    {
+    case 'd':
+      arg = argp_mandatory_argument (arg, state);
+      if (arg == NULL)
+          argp_usage (state);
+      define (arg);
+      break;
+
+    case ARGP_KEY_ARG:
+      argp_usage (state);
+      break;
+
+    case ARGP_KEY_END:
+      break;
+
+    default:
+      return ARGP_ERR_UNKNOWN;
+    }
+  return 0;
+}
+ 
+static struct argp argp = {options, parse_opt, args_doc, doc};
 
 int yylex (); 
 int yyerror (const char *p)
@@ -152,11 +201,10 @@ main (int argc, char **argv)
 {
   int i;
 
+  argp_parse (&argp, argc, argv, 0, 0, NULL);
+
   if (isatty (1) && getenv ("FORCE_TTY") == NULL)
     error (EXIT_FAILURE, 0, "I refuse to write to a tty.  Redirect the output");
-
-  for (i = 1; i < argc; i++)
-    define (argv[i]);
 
   yyparse ();
   return 0;

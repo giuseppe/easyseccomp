@@ -20,7 +20,7 @@ EOF
     grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
     grep "errno: 1" $BATS_TMPDIR/result
 
-    easyseccomp ALLOW_MKDIR < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp -d ALLOW_MKDIR < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
 
     sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
     grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
@@ -38,7 +38,7 @@ EOF
 #endif
 => ERRNO(EPERM);
 EOF
-    easyseccomp ALLOW_MKDIR < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp -d ALLOW_MKDIR < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
 
     sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
     grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
@@ -78,7 +78,7 @@ EOF
     grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
     grep "errno: 1" $BATS_TMPDIR/result
 
-    easyseccomp ALLOW_MKDIR < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp -d ALLOW_MKDIR < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
 
     sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
     grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result

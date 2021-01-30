@@ -24,7 +24,7 @@ and generate the raw BPF as:
 
 ```sh
 $ easyseccomp < profile.seccomp > seccomp.bpf
-$ easyseccomp DENY_MKDIR_WITH_EINVAL < profile.seccomp > seccomp.bpf
+$ easyseccomp -d DENY_MKDIR_WITH_EINVAL < profile.seccomp > seccomp.bpf
 ```
 
 # Status
