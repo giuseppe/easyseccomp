@@ -418,7 +418,7 @@ generate_simple_condition (struct condition_s *c, int jump_len)
 }
 
 static void
-linearize_and_conditions (struct condition_s *it, struct condition_s **conditions, size_t *so_far, size_t max)
+linearize_and_conditions (struct condition_s *it, struct condition_s **conditions, ssize_t *so_far, ssize_t max)
 {
   if (it->type == TYPE_AND)
     {
@@ -439,7 +439,7 @@ linearize_and_conditions (struct condition_s *it, struct condition_s **condition
 static void
 generate_and_condition_action (struct condition_s *c, struct action_s *a)
 {
-  const int MAX = 8;
+  const ssize_t MAX = 8;
   struct condition_s *conditions[MAX];
   int conditions_jmp[MAX+1];
   ssize_t i, total = 0;
@@ -485,18 +485,24 @@ generate_and_condition_action (struct condition_s *c, struct action_s *a)
 }
 
 static int
-cmp_ints (const void *a, const void *b)
+cmp_size_t (const void *a, const void *b)
 {
-  int *ia = (int *) a;
-  int *ib = (int *) b;
+  size_t *ia = (size_t *) a;
+  size_t *ib = (size_t *) b;
 
-  return *ia - *ib;
+  if (*ia == *ib)
+    return 0;
+
+  if (*ia > *ib)
+    return 1;
+
+  return -1;
 }
 
-static int
-find_consecutive_range_length (int *values, int size)
+static size_t
+find_consecutive_range_length (size_t *values, size_t size)
 {
-  int i, cur;
+  size_t i, cur;
 
   if (size == 0)
     return 0;
@@ -549,34 +555,34 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
       break;
     case TYPE_IN_SET:
       {
-        cleanup_free int *remaining = NULL;
-        cleanup_free int *values = NULL;
+        cleanup_free size_t *remaining = NULL;
+        cleanup_free size_t *values = NULL;
         size_t remaining_size = 0;
         struct head_s *set;
         size_t set_len = 0;
         size_t subset_len;
-        int *values_it;
+        size_t *values_it;
         int type;
-        int value;
-        int i;
+        size_t value;
+        size_t i;
 
         type = load_variable (c->name);
 
         set_len = set_calculate_len (c->set);
 
-        values = xmalloc0 (sizeof (int) * set_len);
-        remaining = xmalloc0 (sizeof (int) * set_len);
+        values = xmalloc0 (sizeof (size_t) * set_len);
+        remaining = xmalloc0 (sizeof (size_t) * set_len);
 
         for (set = c->set, i = 0; set; set = set->next, i++)
           values[i] = read_value (set->value, type);
 
-        qsort (values, set_len, sizeof (int), cmp_ints);
+        qsort (values, set_len, sizeof (size_t), cmp_size_t);
         values_it = values;
 
         /* Jumps are limited to 8 bits.  */
         while (set_len > 0)
           {
-            int range_len;
+            size_t range_len;
 
             range_len = find_consecutive_range_length (values_it, set_len);
             if (range_len < 3)

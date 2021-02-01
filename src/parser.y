@@ -47,8 +47,6 @@ argp_mandatory_argument (char *arg, struct argp_state *state)
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  struct arguments *arguments = state->input;
-
   switch (key)
     {
     case 'd':
@@ -199,8 +197,6 @@ value: CONST_NAME {$$ = make_value_from_name ($1);}
 int
 main (int argc, char **argv)
 {
-  int i;
-
   argp_parse (&argp, argc, argv, 0, 0, NULL);
 
   if (isatty (1) && getenv ("FORCE_TTY") == NULL)
