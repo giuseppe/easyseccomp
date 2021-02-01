@@ -36,4 +36,4 @@ jobs:
             ./autogen.sh
             ./configure
             make -j $(nproc)
-            make -j $(nproc) check
+            make -j $(nproc) distcheck

@@ -18,4 +18,5 @@ TESTS = tests/test_simple.bats \
 	tests/test_args.bats
 
 EXTRA_DIST = COPYING README.md src/errnos.h src/generator.h src/types.h \
-	src/sim/glue.h src/sim/bpf.h
+	src/sim/glue.h src/sim/bpf.h build-aux/tap-driver.sh \
+	tests/helpers.bash $(TESTS)
