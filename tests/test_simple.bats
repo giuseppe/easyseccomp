@@ -4,60 +4,60 @@
 load helpers
 
 @test "test EPERM" {
-    cat > $BATS_TMPDIR/program <<EOF
+    cat > $PROGRAM <<EOF
 // this is a comment to ignore
 => ERRNO(EPERM);
 EOF
-    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp < $PROGRAM > $BPF
 
-    sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 1" $BATS_TMPDIR/result
+    sim mkdir x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 1" $RESULT
 }
 
 @test "test ALLOW" {
-    cat > $BATS_TMPDIR/program <<EOF
+    cat > $PROGRAM <<EOF
 => ALLOW();
 EOF
-    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp < $PROGRAM > $BPF
 
-    sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
-    grep "errno: 0" $BATS_TMPDIR/result
+    sim mkdir x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ALLOW $RESULT
+    grep "errno: 0" $RESULT
 }
 
 @test "test ALLOW only mkdir" {
-    cat > $BATS_TMPDIR/program <<EOF
+    cat > $PROGRAM <<EOF
 // this is a comment to ignore
 \$syscall == @mkdir => ALLOW();
 // this is another comment to ignore
 => ERRNO(EPERM);
 EOF
-    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp < $PROGRAM > $BPF
 
-    sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
-    grep "errno: 0" $BATS_TMPDIR/result
+    sim mkdir x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ALLOW $RESULT
+    grep "errno: 0" $RESULT
 
-    sim mknodat x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 1" $BATS_TMPDIR/result
+    sim mknodat x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 1" $RESULT
 }
 
 @test "test ALLOW only mkdir with !=" {
-    cat > $BATS_TMPDIR/program <<EOF
+    cat > $PROGRAM <<EOF
 // this is a comment to ignore
 \$syscall != @mkdir => ERRNO(EPERM);
 // this is another comment to ignore
 => ALLOW();
 EOF
-    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp < $PROGRAM > $BPF
 
-    sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
-    grep "errno: 0" $BATS_TMPDIR/result
+    sim mkdir x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ALLOW $RESULT
+    grep "errno: 0" $RESULT
 
-    sim mknodat x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 1" $BATS_TMPDIR/result
+    sim mknodat x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 1" $RESULT
 }

@@ -4,7 +4,7 @@
 load helpers
 
 @test "test arches" {
-    cat > $BATS_TMPDIR/program <<EOF
+    cat > $PROGRAM <<EOF
 \$arch == @x86 => ERRNO(1);
 \$arch == @x86_64 => ERRNO(2);
 \$arch == @x32 => ERRNO(3);
@@ -25,102 +25,102 @@ load helpers
 \$arch == @s390x => ERRNO(18);
 => ALLOW();
 EOF
-    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp < $PROGRAM > $BPF
 
-    sim mkdir x86 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 1" $BATS_TMPDIR/result
+    sim mkdir x86 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 1" $RESULT
 
-    sim mkdir x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 2" $BATS_TMPDIR/result
+    sim mkdir x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 2" $RESULT
 
-    sim mkdir x32 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 3" $BATS_TMPDIR/result
+    sim mkdir x32 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 3" $RESULT
 
-    sim mkdir arm 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 4" $BATS_TMPDIR/result
+    sim mkdir arm 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 4" $RESULT
 
-    sim mkdir aarch64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 5" $BATS_TMPDIR/result
+    sim mkdir aarch64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 5" $RESULT
 
-    sim mkdir mips 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 6" $BATS_TMPDIR/result
+    sim mkdir mips 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 6" $RESULT
 
-    sim mkdir mipsel 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 7" $BATS_TMPDIR/result
+    sim mkdir mipsel 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 7" $RESULT
 
-    sim mkdir mips64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 8" $BATS_TMPDIR/result
+    sim mkdir mips64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 8" $RESULT
 
-    sim mkdir mipsel64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 9" $BATS_TMPDIR/result
+    sim mkdir mipsel64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 9" $RESULT
 
-    sim mkdir mips64n32 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 10" $BATS_TMPDIR/result
+    sim mkdir mips64n32 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 10" $RESULT
 
-    sim mkdir mipsel64n32 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 11" $BATS_TMPDIR/result
+    sim mkdir mipsel64n32 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 11" $RESULT
 
-    sim mkdir parisc 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 12" $BATS_TMPDIR/result
+    sim mkdir parisc 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 12" $RESULT
 
-    sim mkdir parisc64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 13" $BATS_TMPDIR/result
+    sim mkdir parisc64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 13" $RESULT
 
-    sim mkdir ppc 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 14" $BATS_TMPDIR/result
+    sim mkdir ppc 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 14" $RESULT
 
-    sim mkdir ppc64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 15" $BATS_TMPDIR/result
+    sim mkdir ppc64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 15" $RESULT
 
-    sim mkdir ppc64le 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 16" $BATS_TMPDIR/result
+    sim mkdir ppc64le 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 16" $RESULT
 
-    sim mkdir s390 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 17" $BATS_TMPDIR/result
+    sim mkdir s390 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 17" $RESULT
 
-    sim mkdir s390x 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 18" $BATS_TMPDIR/result
+    sim mkdir s390x 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 18" $RESULT
 }
 
 @test "test syscall@arch" {
-    cat > $BATS_TMPDIR/program <<EOF
+    cat > $PROGRAM <<EOF
 \$arch == @x86_64 && \$syscall == @close@x86_64  => ERRNO(1);
 \$arch == @mipsel && \$syscall == @close@x86_64  => ERRNO(2);
 => ALLOW();
 EOF
-    easyseccomp < $BATS_TMPDIR/program > $BATS_TMPDIR/bpf
+    easyseccomp < $PROGRAM > $BPF
 
-    sim close x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 1" $BATS_TMPDIR/result
+    sim close x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 1" $RESULT
 
-    sim close mipsel 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ERRNO $BATS_TMPDIR/result
-    grep "errno: 2" $BATS_TMPDIR/result
+    sim close mipsel 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 2" $RESULT
 
-    sim read x86_64 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
-    grep "errno: 0" $BATS_TMPDIR/result
+    sim read x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ALLOW $RESULT
+    grep "errno: 0" $RESULT
 
-    sim read mipsel 0 0 0 0 0 0 < $BATS_TMPDIR/bpf > $BATS_TMPDIR/result
-    grep SECCOMP_RET_ALLOW $BATS_TMPDIR/result
-    grep "errno: 0" $BATS_TMPDIR/result
+    sim read mipsel 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ALLOW $RESULT
+    grep "errno: 0" $RESULT
 }
