@@ -39,11 +39,11 @@ the seccomp profile as:
 
 ```sh
 $ easyseccomp < profile.seccomp > seccomp.bpf
-$ podman run --annotation run.oci.seccomp_bpf_data=/tmp/seccomp.bpf --rm fedora mkdir /tmp/foo
+$ podman run --annotation run.oci.seccomp_bpf_file=/tmp/seccomp.bpf --rm fedora mkdir /tmp/foo
 mkdir: cannot create directory '/tmp/foo': Operation not permitted
 
 $ easyseccomp DENY_MKDIR_WITH_EINVAL < profile.seccomp > seccomp.bpf
-$ podman run --annotation run.oci.seccomp_bpf_data=/tmp/seccomp.bpf --rm fedora mkdir /tmp/foo
+$ podman run --annotation run.oci.seccomp_bpf_file=/tmp/seccomp.bpf --rm fedora mkdir /tmp/foo
 mkdir: cannot create directory '/tmp/foo': Invalid argument
 ```
 
