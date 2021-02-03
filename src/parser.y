@@ -32,7 +32,7 @@ static char doc[] = "easyseccomp - easily generate seccomp bpf";
 static char args_doc[] = "[OPTION..]";
 static struct argp_option options[] =
   {
-    {"define", 'd', 0, 0, "Define a symbol (used for #if(n)def directives)"},
+    {"define", 'd', "NAME", 0, "Define a symbol (used for #if(n)def directives)", 0},
     {0}
   };
 
@@ -69,7 +69,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
   return 0;
 }
  
-static struct argp argp = {options, parse_opt, args_doc, doc};
+static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 
 int yylex (); 
 int yyerror (const char *p)
