@@ -2,7 +2,9 @@
 
 a domain specific language for defining seccomp profiles for
 containers in an easier way and having more control on the generated
-BPF that it is possible with libseccomp.
+BPF that it is possible with libseccomp.  This blog post explains more
+in detail why the project was started:
+https://www.scrivano.org/posts/2021-01-30-easyseccomp/
 
 A seccomp profile can be defined as:
 
