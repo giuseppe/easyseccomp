@@ -29,14 +29,35 @@ def args_p(p):
     args = p['args']
     return args is not None and len(args) > 0
 
-def generate_directives(body, directives, command, prefix=""):
+def generate_and_directives(body, directives):
     if body is None or body == "":
         return
+    i = 0
     for d in directives:
-        print("#%s %s%s" % (command, prefix, d.upper()))
+        print("#%sifndef %s" % (" " * i, d.upper()))
+        i = i + 1
+    print(body)
+    for d in directives:
+        i = i - 1
+        print("#%sendif" % (" " * i))
+    print()
+
+def generate_or_directives(body, directives, exclude_directives):
+    if body is None or body == "":
+        return
+
+    i = 0
+    for d in exclude_directives:
+        print("#%sifndef %s" % (" " * i, d.upper()))
+        i = i + 1
+    for d in directives:
+        print("#%sifdef %s" % (" " * i, d.upper()))
         print(body)
-        print("#endif")
-        print()
+        print("#%sendif" % (" " * i))
+    for d in exclude_directives:
+        i = i - 1
+        print("#%sendif" % (" " * i))
+    print()
 
 def generate_condition(c):
     argument = "$arg%s" % c['index']
@@ -92,16 +113,22 @@ def generate_from(policy):
 
             if not has_includes and not has_excludes:
                 print(body)
+
+            exclude_directives = []
+            if 'arches' in i['excludes']:
+                exclude_directives = exclude_directives + ["ARCH_%s" % i for i in i['excludes']['arches']]
+            if 'caps' in i['excludes']:
+                exclude_directives = exclude_directives + i['excludes']['caps']
+
             if has_includes:
                 if 'arches' in i['includes']:
-                    generate_directives(body, i['includes']['arches'], "ifdef", "ARCH_")
+                    directives = ["ARCH_%s" % i for i in i['includes']['arches']]
+                    generate_or_directives(body, directives, exclude_directives)
                 if 'caps' in i['includes']:
-                    generate_directives(body, i['includes']['caps'], "ifdef", "")
-            if has_excludes:
-                if 'arches' in i['excludes']:
-                    generate_directives(body, i['excludes']['arches'], "ifndef", "ARCH_")
-                if 'caps' in i['excludes']:
-                    generate_directives(body, i['excludes']['caps'], "ifndef", "")
+                    generate_or_directives(body, i['includes']['caps'], exclude_directives)
+            elif has_excludes:
+                generate_and_directives(body, exclude_directives)
+
 
     if termination_statement is not None:
         print(termination_statement)
