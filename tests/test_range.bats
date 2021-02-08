@@ -156,3 +156,25 @@ EOF
         grep "errno: 38" $RESULT
     done
 }
+
+@test "test in KERNEL(VERSION)" {
+    cat > $PROGRAM <<EOF
+\$syscall in KERNEL(5.1) => ALLOW();
+=> ERRNO(ENOSYS);
+EOF
+    easyseccomp < $PROGRAM > $BPF
+
+    for i in mkdir unlink close; do
+        sim $i x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+        grep SECCOMP_RET_ALLOW $RESULT
+        grep "errno: 0" $RESULT
+    done
+
+    sim open_tree x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 38" $RESULT
+
+    sim pidfd_open x86_64 0 0 0 0 0 0 < $BPF > $RESULT
+    grep SECCOMP_RET_ERRNO $RESULT
+    grep "errno: 38" $RESULT
+}

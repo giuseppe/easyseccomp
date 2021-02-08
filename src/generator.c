@@ -19,6 +19,7 @@
 #define _GNU_SOURCE 1
 
 #include "generator.h"
+#include "syscall-versions/syscall-versions.h"
 #include "errnos.h"
 #include "error.h"
 #include <stdio.h>
@@ -93,6 +94,48 @@ emit (struct sock_filter *filter, size_t len)
 {
   if (fwrite (filter, 1, len, stdout) != len)
     abort ();
+}
+
+static struct head_s *
+calculate_set_from_kernel_version (const char *version)
+{
+  char *endptr = NULL;
+  struct head_s *h = NULL;
+  int parts = 0, i, tmp, value = 0;
+
+  if (strlen (version) < 10)
+    error (EXIT_FAILURE, 0, "invalid kernel version");
+
+  version += strlen ("KERNEL(");
+  while (*version)
+    {
+      if (parts++ > 4)
+        error (EXIT_FAILURE, 0, "invalid kernel version");
+
+      tmp = strtol (version, &endptr, 10);
+
+      value = (value << 8) | tmp;
+
+      if (*endptr == '.')
+        endptr++;
+      if (*endptr == ')')
+        break;
+
+      version = endptr;
+    }
+  while (parts++ < 4)
+    value <<= 8;
+
+  for (i = 0; kernel_syscalls[i]; i++)
+    {
+      if (kernel_version_for_syscalls[i] <= value)
+        {
+          struct value_s *v = make_value_from_name (xstrdup (kernel_syscalls[i]));
+          h = make_set (v, h);
+        }
+    }
+
+  return h;
 }
 
 static int
@@ -553,6 +596,9 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         generate_action (a);
       }
       break;
+    case TYPE_IN_KERNEL:
+      c->set = calculate_set_from_kernel_version (c->kernel);
+        __attribute__ ((fallthrough));
     case TYPE_IN_SET:
       {
         cleanup_free size_t *remaining = NULL;

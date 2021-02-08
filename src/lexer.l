@@ -51,6 +51,7 @@ safe_atoi (char *value)
 %option noyywrap
 
 %%
+KERNEL\([0-9]+(\.[0-9]+)+\)                      {yylval.str_value = xstrdup (skip_spaces (yytext)); return KERNEL;}
 "//".*                                            {}
 #[ ]*[A-Za-z_][A-Za-z0-9]+                        {yylval.str_value = xstrdup (skip_spaces (yytext+1)); return DIRECTIVE;}
 $[A-Za-z_][A-Za-z0-9]*                            {yylval.str_value = xstrdup (yytext); return NAME;}

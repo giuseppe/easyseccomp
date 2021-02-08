@@ -96,6 +96,7 @@ int yyerror (const char *p)
 %token <str_value> CONST_NAME
 %token <str_value> UCASE_NAME
 %token <str_value> DIRECTIVE
+%token <str_value> KERNEL
 %token THEN
 %token AND
 %token EQ
@@ -181,6 +182,7 @@ ge: NAME GE value {$$ = make_condition (TYPE_GE, $1, $3, NULL);}
 
 in_set: NAME IN LP set RP {$$ = make_condition (TYPE_IN_SET, $1, NULL, $4);}
 | NAME NOT IN LP set RP {$$ = make_condition (TYPE_NOT_IN_SET, $1, NULL, $5);}
+| NAME IN KERNEL {$$ = make_in_kernel_condition ($1, $3);}
 
 set: value COMMA set {$$ = make_set ($1, $3);}
 | value {$$ = make_set ($1, NULL);}

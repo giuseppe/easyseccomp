@@ -19,7 +19,7 @@
 #include <stdlib.h>
 
 char *
-xstrdup (char *v)
+xstrdup (const char *v)
 {
   char *r = strdup (v);
   if (r == NULL)
@@ -64,6 +64,16 @@ make_condition (int type, char *name, struct value_s *value, struct head_s *set)
   c->name = name;
   c->set = set;
   c->value = value;
+  return c;
+}
+
+struct condition_s *
+make_in_kernel_condition (char *name, char *kernel)
+{
+  struct condition_s *c = xmalloc0 (sizeof (struct condition_s));
+  c->type = TYPE_IN_KERNEL;
+  c->name = name;
+  c->kernel = kernel;
   return c;
 }
 

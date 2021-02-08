@@ -30,8 +30,9 @@
 # define TYPE_GT 8
 # define TYPE_GE 9
 # define TYPE_MASKED_EQ 10
+# define TYPE_IN_KERNEL 11
 
-char *xstrdup (char *v);
+char *xstrdup (const char *v);
 void *xmalloc0 (size_t s);
 
 struct value_s
@@ -57,6 +58,7 @@ struct condition_s
 {
   int type;
   char *name;
+  char *kernel;
   int mask_op;
   struct head_s *set;
   struct value_s *mask;
@@ -78,6 +80,8 @@ struct rule_s
 struct head_s *make_set (struct value_s *value, struct head_s *next);
 
 size_t set_calculate_len (struct head_s *set);
+
+struct condition_s *make_in_kernel_condition (char *name, char *kernel);
 
 struct condition_s *make_condition (int type, char *name, struct value_s *value, struct head_s *set);
 
