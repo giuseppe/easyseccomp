@@ -1,6 +1,6 @@
 bin_PROGRAMS = easyseccomp sim
 
-easyseccomp_SOURCES = src/generator.c src/types.c src/parser.y src/lexer.l
+easyseccomp_SOURCES = src/generator.c src/types.c src/parser.y src/lexer.l src/syscall-versions/syscall-versions.c
 sim_SOURCES = src/sim/sim.c src/sim/bpf_filter.c
 
 AM_YFLAGS = -d
@@ -18,5 +18,13 @@ TESTS = tests/test_simple.bats \
 	tests/test_args.bats
 
 EXTRA_DIST = COPYING README.md src/errnos.h src/generator.h src/types.h \
-	src/sim/glue.h src/sim/bpf.h build-aux/tap-driver.sh \
-	tests/helpers.bash $(TESTS)
+	src/syscall-versions/syscall-versions.h src/sim/glue.h src/sim/bpf.h \
+	build-aux/tap-driver.sh tests/helpers.bash $(TESTS) \
+	src/syscall-versions/generate-all-syscalls.sh \
+	src/syscall-versions/generate-c-code.py
+
+update-syscall-versions:
+	$(if $(KERNEL_CHECKOUT),, $(error KERNEL_CHECKOUT is not defined))
+	$(abs_srcdir)/src/syscall-versions/generate-all-syscalls.sh $(KERNEL_CHECKOUT)
+
+.PHONY: update-syscall-versions
