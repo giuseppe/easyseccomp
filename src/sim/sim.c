@@ -218,5 +218,6 @@ int main (int argc, char **argv)
                            sizeof (data));
   action = get_seccomp_action (filter_res, &errno_code);
   printf ("raw: %u\naction: %s\nerrno: %d\n", filter_res, action, errno_code);
+  free (program);
   return 0;
 }
