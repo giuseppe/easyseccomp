@@ -1,4 +1,4 @@
-# easyseccomp (better name to be chosen)
+# easyseccomp
 
 a domain specific language for defining seccomp profiles for
 containers in an easier way and having more control on the generated
