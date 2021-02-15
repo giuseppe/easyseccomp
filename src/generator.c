@@ -43,6 +43,10 @@
 #define syscall_nr (offsetof(struct seccomp_data, nr))
 #define syscall_arch (offsetof(struct seccomp_data, arch))
 
+#define VARIABLE_TYPE(x) ((x >> 8) & 0xFF)
+#define VARIABLE_OFFSET(x) (x & 0xFF)
+#define MAKE_VARIABLE(t,i) ((t << 8) | (i & 0xFF))
+
 enum
   {
     VARIABLE_TYPE_ARCH = 1,
@@ -141,7 +145,7 @@ calculate_set_from_kernel_version (const char *version)
 static int
 load_variable (const char *name)
 {
-  int offset = -1;
+  int offset = 0;
   int type = 0;
 
   if (STREQ (name, "$arch"))
@@ -189,6 +193,29 @@ load_variable (const char *name)
       error (EXIT_FAILURE, 0, "unknown variable `%s`", name);
     }
 
+  return MAKE_VARIABLE (type, offset);
+}
+
+static void
+emit_load (int what)
+{
+  int offset = VARIABLE_OFFSET (what);
+
+  switch (VARIABLE_TYPE (what))
+    {
+    case VARIABLE_TYPE_ARCH:
+      break;
+
+    case VARIABLE_TYPE_SYSCALL:
+      break;
+
+    case VARIABLE_TYPE_ARG:
+      break;
+
+    default:
+      error (EXIT_FAILURE, 0, "unknown variable type `%d`", VARIABLE_TYPE (what));
+    }
+
   {
     struct sock_filter stmt[] =
       {
@@ -196,8 +223,6 @@ load_variable (const char *name)
       };
     emit (stmt, sizeof (struct sock_filter));
   }
-
-  return type;
 }
 
 static int
@@ -344,12 +369,12 @@ resolve_syscall (const char *name)
 }
 
 static int
-read_value (struct value_s *v, int type)
+read_value (struct value_s *v, int variable)
 {
   if (v->name == NULL)
     return v->value;
 
-  switch (type)
+  switch (VARIABLE_TYPE (variable))
     {
     case VARIABLE_TYPE_ARCH:
       return resolve_arch (v->name);
@@ -429,15 +454,16 @@ generate_inverse_jump (int type, int value, int jump_len)
 static void
 generate_masked_condition (struct condition_s *c, int jump_len)
 {
-  int type;
   int value;
+  int variable;
   int mask_value;
 
-  type = load_variable (c->name);
+  variable = load_variable (c->name);
 
-  value = read_value (c->value, type);
-  mask_value = read_value (c->mask, type);
+  value = read_value (c->value, variable);
+  mask_value = read_value (c->mask, variable);
 
+  emit_load (variable);
   {
     struct sock_filter stmt[] = {
       BPF_STMT(BPF_ALU|BPF_AND|BPF_IMM, mask_value),
@@ -451,15 +477,16 @@ generate_masked_condition (struct condition_s *c, int jump_len)
 static void
 generate_simple_condition (struct condition_s *c, int jump_len)
 {
-  int type;
   int value;
+  int variable;
 
   if (c->type == TYPE_MASKED_EQ)
     return generate_masked_condition (c, jump_len);
 
-  type = load_variable (c->name);
-  value = read_value (c->value, type);
+  variable = load_variable (c->name);
+  value = read_value (c->value, variable);
 
+  emit_load (variable);
   generate_inverse_jump (c->type, value, jump_len);
 }
 
@@ -576,10 +603,10 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
       {
         struct head_s *set;
         size_t set_len = 0;
-        int type;
+        int variable;
         int value;
 
-        type = load_variable (c->name);
+        variable = load_variable (c->name);
 
         set_len = set_calculate_len (c->set);
 
@@ -588,14 +615,17 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         if (set_len >= 256)
           error (EXIT_FAILURE, 0, "set too big");
 
+        emit_load (variable);
+
         /* This could be implemented using ranges similarly to TYPE_IN_SET,
            but for now convert to a series of disequalities.  */
         for (set = c->set; set; set = set->next)
           {
-            value = read_value (set->value, type);
+            value = read_value (set->value, variable);
             generate_inverse_jump (TYPE_NE, value, set_len);
             set_len--;
           }
+
         generate_action (a);
       }
       break;
@@ -611,11 +641,11 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         size_t set_len = 0;
         size_t subset_len;
         size_t *values_it;
-        int type;
+        int variable;
         size_t value;
         size_t i;
 
-        type = load_variable (c->name);
+        variable = load_variable (c->name);
 
         set_len = set_calculate_len (c->set);
 
@@ -623,10 +653,12 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         remaining = xmalloc0 (sizeof (size_t) * set_len);
 
         for (set = c->set, i = 0; set; set = set->next, i++)
-          values[i] = read_value (set->value, type);
+          values[i] = read_value (set->value, variable);
 
         qsort (values, set_len, sizeof (size_t), cmp_size_t);
         values_it = values;
+
+        emit_load (variable);
 
         /* Jumps are limited to 8 bits.  */
         while (set_len > 0)
