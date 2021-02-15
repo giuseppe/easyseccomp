@@ -100,6 +100,15 @@ emit (struct sock_filter *filter, size_t len)
     abort ();
 }
 
+static void
+emit_stmt (int code, int k)
+{
+  struct sock_filter stmt[] = {
+    BPF_STMT (code, k)
+  };
+  emit (stmt, sizeof (stmt[0]));
+}
+
 static struct head_s *
 calculate_set_from_kernel_version (const char *version)
 {
@@ -216,13 +225,7 @@ emit_load (int what)
       error (EXIT_FAILURE, 0, "unknown variable type `%d`", VARIABLE_TYPE (what));
     }
 
-  {
-    struct sock_filter stmt[] =
-      {
-        BPF_STMT (BPF_LD|BPF_W|BPF_ABS, offset)
-      };
-    emit (stmt, sizeof (struct sock_filter));
-  }
+  emit_stmt (BPF_LD|BPF_W|BPF_ABS, offset);
 }
 
 static int
@@ -246,68 +249,23 @@ static void
 generate_action (struct action_s *a)
 {
   if (STREQ (a->name, "ALLOW"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_ALLOW)
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_ALLOW);
   else if (STREQ (a->name, "TRAP"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_TRAP)
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_TRAP);
   else if (STREQ (a->name, "NOTIFY"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_USER_NOTIF)
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_USER_NOTIF);
   else if (STREQ (a->name, "LOG"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_LOG)
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_LOG);
   else if (STREQ (a->name, "KILL"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_KILL)
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_KILL);
   else if (STREQ (a->name, "KILL_THREAD"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_KILL_THREAD)
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_KILL_THREAD);
   else if (STREQ (a->name, "KILL_PROCESS"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_KILL_PROCESS)
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_KILL_PROCESS);
   else if (STREQ (a->name, "ERRNO"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_ERRNO|get_errno (a))
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_ERRNO|get_errno (a));
   else if (STREQ (a->name, "TRACE"))
-    {
-      struct sock_filter stmt[] = {
-        BPF_STMT (BPF_RET|BPF_K, SECCOMP_RET_TRACE|get_errno (a))
-      };
-      emit (stmt, sizeof (struct sock_filter));
-    }
+    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_TRACE|get_errno (a));
   else
     error (EXIT_FAILURE, 0, "unknown action `%s`", a->name);
 }
@@ -398,7 +356,6 @@ generate_jump (int jump_len)
     BPF_JUMP(BPF_JMP|BPF_JA|BPF_K, jump_len, 0, 0),
   };
   emit (stmt, sizeof (struct sock_filter));
-
 }
 
 /* generate a jump when the condition is not satisfied.  */
@@ -464,12 +421,7 @@ generate_masked_condition (struct condition_s *c, int jump_len)
   mask_value = read_value (c->mask, variable);
 
   emit_load (variable);
-  {
-    struct sock_filter stmt[] = {
-      BPF_STMT(BPF_ALU|BPF_AND|BPF_IMM, mask_value),
-    };
-    emit (stmt, sizeof (stmt));
-  }
+  emit_stmt (BPF_ALU|BPF_AND|BPF_IMM, mask_value);
 
   generate_inverse_jump (c->mask_op, value, jump_len);
 }
