@@ -29,6 +29,7 @@
 #include <linux/unistd.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 /* libseccomp is used to resolve syscall names.  */
 #include <seccomp.h>
@@ -93,6 +94,14 @@ define (const char *v)
   defines = d;
 }
 
+static const char *
+drop_prefix (const char *v, char p)
+{
+  if (v[0] == p)
+    return v + 1;
+  return v;
+}
+
 static void
 emit (struct sock_filter *filter, size_t len)
 {
@@ -107,6 +116,24 @@ emit_stmt (int code, int k)
     BPF_STMT (code, k)
   };
   emit (stmt, sizeof (stmt[0]));
+}
+
+static bool
+multiplexed_syscall_p (int variable, int value)
+{
+  if (VARIABLE_TYPE (variable) != VARIABLE_TYPE_SYSCALL)
+    return false;
+
+  return value < 0;
+}
+
+static void
+multiplexed_syscall_ignored_warning (struct value_s *v)
+{
+  if (v->name)
+    fprintf (stderr, "ignoring multiplexed syscall `%s`\n", drop_prefix (v->name, '@'));
+  else
+    fprintf (stderr, "ignoring multiplexed syscall `%d`\n", v->value);
 }
 
 static struct head_s *
@@ -275,8 +302,7 @@ resolve_arch (const char *name)
 {
   int arch;
 
-  if (name[0] == '@')
-    name++;
+  name = drop_prefix (name, '@');
 
   arch = seccomp_arch_resolve_name (name);
   if (arch == 0)
@@ -292,8 +318,7 @@ resolve_syscall (const char *name)
   char *arch_sep;
   int syscall;
 
-  if (name[0] == '@')
-    name++;
+  name = drop_prefix (name, '@');
 
   if (strlen (name) > sizeof (buf) -1)
     error (EXIT_FAILURE, 0, "invalid syscall `%s`", name);
@@ -316,12 +341,6 @@ resolve_syscall (const char *name)
 
   if (syscall == __NR_SCMP_ERROR)
     error (EXIT_FAILURE, 0, "unknown syscall `%s`", name);
-
-  if (syscall < 0)
-    {
-      fprintf (stderr, "ignoring pseudo syscall `%s`\n", name);
-      return syscall;
-    }
 
   return syscall;
 }
@@ -436,7 +455,14 @@ generate_simple_condition (struct condition_s *c, int jump_len)
     return generate_masked_condition (c, jump_len);
 
   variable = load_variable (c->name);
+
   value = read_value (c->value, variable);
+
+  if (multiplexed_syscall_p (variable, value))
+    {
+      multiplexed_syscall_ignored_warning (c->value);
+      return;
+    }
 
   emit_load (variable);
   generate_inverse_jump (c->type, value, jump_len);
@@ -604,8 +630,20 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         values = xmalloc0 (sizeof (size_t) * set_len);
         remaining = xmalloc0 (sizeof (size_t) * set_len);
 
-        for (set = c->set, i = 0; set; set = set->next, i++)
-          values[i] = read_value (set->value, variable);
+        for (set = c->set, i = 0; set; set = set->next)
+          {
+            values[i] = read_value (set->value, variable);
+
+            if (multiplexed_syscall_p (variable, values[i]))
+              {
+                multiplexed_syscall_ignored_warning (set->value);
+                continue;
+              }
+
+            i++;
+          }
+
+        set_len = i;
 
         qsort (values, set_len, sizeof (size_t), cmp_size_t);
         values_it = values;
