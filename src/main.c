@@ -31,6 +31,7 @@ static char args_doc[] = "[OPTION..]";
 static struct argp_option options[] =
   {
     {"define", 'd', "NAME", 0, "Define a symbol (used for #if(n)def directives)", 0},
+    {"verbose", 'v', NULL, 0, "Enable warnings", 0},
     {0}
   };
 
@@ -53,6 +54,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
       if (arg == NULL)
           argp_usage (state);
       easy_seccomp_define (ctx, arg);
+      break;
+
+    case 'v':
+      easy_seccomp_set_verbose (ctx, true);
       break;
 
     case ARGP_KEY_ARG:

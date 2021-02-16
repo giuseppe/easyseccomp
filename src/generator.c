@@ -64,6 +64,7 @@ struct easy_seccomp_ctx_s
   char *error;
   struct rule_s *rules;
   FILE *out;
+  bool verbose;
 };
 
 struct easy_seccomp_ctx_s *
@@ -126,6 +127,18 @@ const char *
 easy_seccomp_get_last_error (struct easy_seccomp_ctx_s *ctx)
 {
   return ctx->error;
+}
+
+bool
+easy_seccomp_get_verbose (struct easy_seccomp_ctx_s *ctx)
+{
+  return ctx->verbose;
+}
+
+void
+easy_seccomp_set_verbose (struct easy_seccomp_ctx_s *ctx, bool verbose)
+{
+  ctx->verbose = verbose;
 }
 
 enum
@@ -206,6 +219,9 @@ multiplexed_syscall_p (int variable, int value)
 static void
 multiplexed_syscall_ignored_warning (struct easy_seccomp_ctx_s *ctx, struct value_s *v)
 {
+  if (! ctx->verbose)
+    return;
+
   if (v->name)
     fprintf (stderr, "ignoring multiplexed syscall `%s`\n", drop_prefix (v->name, '@'));
   else
