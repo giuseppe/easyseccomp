@@ -1,12 +1,19 @@
 bin_PROGRAMS = easyseccomp sim
 
-easyseccomp_SOURCES = src/generator.c src/types.c src/parser.y src/lexer.l src/syscall-versions/syscall-versions.c src/main.c
+noinst_LIBRARIES = libeasyseccomp.a
+
 sim_SOURCES = src/sim/sim.c src/sim/bpf_filter.c
 
-AM_YFLAGS = -d
-easyseccomp_CFLAGS = -I $(abs_srcdir)/src
+easyseccomp_SOURCES = src/main.c
+easyseccomp_LDADD = libeasyseccomp.a
+libeasyseccomp_a_SOURCES = src/lexer.l src/parser.y src/generator.c src/types.c src/syscall-versions/syscall-versions.c
 
-lexer.o: parser.o
+libeasyseccomp_a_LFLAGS = --header-file=$(abs_builddir)/src/libeasyseccomp_a-lexer.h
+libeasyseccomp_a_YFLAGS = -d -Wno-yacc
+libeasyseccomp_a_CFLAGS = -I $(abs_srcdir)/src -I $(abs_builddir)/src
+
+src/generator.c: src/libeasyseccomp_a-parser.h
+
 
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
 
@@ -21,7 +28,7 @@ EXTRA_DIST = COPYING README.md src/errnos.h src/generator.h src/types.h \
 	src/syscall-versions/syscall-versions.h src/sim/glue.h src/sim/bpf.h \
 	build-aux/tap-driver.sh tests/helpers.bash $(TESTS) \
 	src/syscall-versions/generate-all-syscalls.sh \
-	src/syscall-versions/generate-c-code.py
+	src/syscall-versions/generate-c-code.py src/libeasyseccomp_a-lexer.h
 
 update-syscall-versions:
 	$(if $(KERNEL_CHECKOUT),, $(error KERNEL_CHECKOUT is not defined))

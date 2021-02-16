@@ -22,7 +22,8 @@
 #include "syscall-versions/syscall-versions.h"
 #include "errnos.h"
 #include "error.h"
-#include <stdio.h>
+#include "libeasyseccomp_a-parser.h"
+#include "libeasyseccomp_a-lexer.h"
 #include <linux/types.h>
 #include <linux/filter.h>
 #include <linux/seccomp.h>
@@ -31,6 +32,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 
 /* libseccomp is used to resolve syscall names.  */
@@ -60,12 +62,21 @@ struct easy_seccomp_ctx_s
 {
   struct define_s *defines;
   char *error;
+  struct rule_s *rules;
+  FILE *out;
 };
 
 struct easy_seccomp_ctx_s *
 easy_seccomp_make_ctx()
 {
   return calloc (1, sizeof (struct easy_seccomp_ctx_s));
+}
+
+void
+easy_seccomp_set_parser_rules (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules)
+{
+  free_rules (ctx->rules);
+  ctx->rules = rules;
 }
 
 void
@@ -84,12 +95,13 @@ easy_seccomp_free_ctx (struct easy_seccomp_ctx_s *ctx)
       it = n;
     }
 
+  free_rules (ctx->rules);
   free (ctx->error);
   free (ctx);
 }
 
-static void
-set_error (struct easy_seccomp_ctx_s *ctx, const char *fmt, ...)
+void
+easy_seccomp_set_error (struct easy_seccomp_ctx_s *ctx, const char *fmt, ...)
 {
   va_list args_list;
   char *msg = NULL;
@@ -165,9 +177,9 @@ drop_prefix (const char *v, char p)
 static int
 emit (struct easy_seccomp_ctx_s *ctx, struct sock_filter *filter, size_t len)
 {
-  if (fwrite (filter, 1, len, stdout) != len)
+  if (fwrite (filter, 1, len, ctx->out) != len)
     {
-      set_error (ctx, "failed to write to the destination");
+      easy_seccomp_set_error (ctx, "failed to write to the destination");
       return -1;
     }
   return 0;
@@ -209,7 +221,7 @@ calculate_set_from_kernel_version (struct easy_seccomp_ctx_s *ctx, const char *v
 
   if (strlen (version) < 10)
     {
-      set_error (ctx, "invalid kernel version");
+      easy_seccomp_set_error (ctx, "invalid kernel version");
       return NULL;
     }
 
@@ -218,7 +230,7 @@ calculate_set_from_kernel_version (struct easy_seccomp_ctx_s *ctx, const char *v
     {
       if (parts++ > 4)
         {
-          set_error (ctx, "invalid kernel version");
+          easy_seccomp_set_error (ctx, "invalid kernel version");
           return NULL;
         }
 
@@ -298,7 +310,7 @@ load_variable (struct easy_seccomp_ctx_s *ctx, const char *name)
     }
   else
     {
-      set_error (ctx, "unknown variable `%s`", name);
+      easy_seccomp_set_error (ctx, "unknown variable `%s`", name);
       return -1;
     }
 
@@ -322,7 +334,7 @@ emit_load (struct easy_seccomp_ctx_s *ctx, int what)
       break;
 
     default:
-      set_error (ctx, "unknown variable type `%d`", VARIABLE_TYPE (what));
+      easy_seccomp_set_error (ctx, "unknown variable type `%d`", VARIABLE_TYPE (what));
       return -1;
     }
 
@@ -342,7 +354,7 @@ get_errno (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
     if (STREQ (a->str_value, errnos[i].name))
       return errnos[i].value;
 
-  set_error (ctx, "unknown errno value `%s`", a->str_value);
+  easy_seccomp_set_error (ctx, "unknown errno value `%s`", a->str_value);
   return -1;
 }
 
@@ -379,7 +391,7 @@ generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
     }
   else
     {
-      set_error (ctx, "unknown action `%s`", a->name);
+      easy_seccomp_set_error (ctx, "unknown action `%s`", a->name);
       return -1;
     }
   return 0;
@@ -393,7 +405,7 @@ resolve_arch (struct easy_seccomp_ctx_s *ctx, const char *name, int *arch)
   *arch = seccomp_arch_resolve_name (name);
   if (*arch == 0)
     {
-      set_error (ctx, "unknown arch `%s`", name);
+      easy_seccomp_set_error (ctx, "unknown arch `%s`", name);
       return -1;
     }
 
@@ -410,7 +422,7 @@ resolve_syscall (struct easy_seccomp_ctx_s *ctx, const char *name, int *syscall)
 
   if (strlen (name) > sizeof (buf) -1)
     {
-      set_error (ctx, "invalid syscall `%s`", name);
+      easy_seccomp_set_error (ctx, "invalid syscall `%s`", name);
       return -1;
     }
 
@@ -434,7 +446,7 @@ resolve_syscall (struct easy_seccomp_ctx_s *ctx, const char *name, int *syscall)
 
   if (*syscall == __NR_SCMP_ERROR)
     {
-      set_error (ctx, "unknown syscall `%s`", name);
+      easy_seccomp_set_error (ctx, "unknown syscall `%s`", name);
       return -1;
     }
 
@@ -461,7 +473,7 @@ read_value (struct easy_seccomp_ctx_s *ctx, struct value_s *v, int variable, int
     case VARIABLE_TYPE_ARG:
 
     default:
-      set_error (ctx, "unknown argument `%s`", v->name);
+      easy_seccomp_set_error (ctx, "unknown argument `%s`", v->name);
       return -1;
     }
 
@@ -518,7 +530,7 @@ generate_inverse_jump (struct easy_seccomp_ctx_s *ctx, int type, int value, int 
       break;
 
     default:
-      set_error (ctx, "invalid condition type %d", type);
+      easy_seccomp_set_error (ctx, "invalid condition type %d", type);
       return -1;
     }
 
@@ -603,13 +615,13 @@ linearize_and_conditions (struct easy_seccomp_ctx_s *ctx, struct condition_s *it
     }
   if (*so_far == max - 1)
     {
-      set_error (ctx, "AND condition too long");
+      easy_seccomp_set_error (ctx, "AND condition too long");
       return -1;
     }
 
   if (it->type == TYPE_IN_SET || it->type == TYPE_NOT_IN_SET)
     {
-      set_error (ctx, "complex conditions not supported with AND");
+      easy_seccomp_set_error (ctx, "complex conditions not supported with AND");
       return -1;
     }
 
@@ -633,7 +645,7 @@ generate_and_condition_action (struct easy_seccomp_ctx_s *ctx, struct condition_
 
   if (total == 0)
     {
-      set_error (ctx, "internal error, no AND conditions found");
+      easy_seccomp_set_error (ctx, "internal error, no AND conditions found");
       return -1;
     }
 
@@ -661,7 +673,7 @@ generate_and_condition_action (struct easy_seccomp_ctx_s *ctx, struct condition_
         case TYPE_IN_SET:
         case TYPE_NOT_IN_SET:
         default:
-          set_error (ctx, "internal error, invalid condition type for AND");
+          easy_seccomp_set_error (ctx, "internal error, invalid condition type for AND");
           return -1;
         }
       conditions_jmp[i] = conditions_jmp[i+1] + length_op;
@@ -736,7 +748,7 @@ generate_condition_and_action (struct easy_seccomp_ctx_s *ctx, struct condition_
            an intermediate jump.  */
         if (set_len >= 256)
           {
-            set_error (ctx, "set too big");
+            easy_seccomp_set_error (ctx, "set too big");
             return -1;
           }
 
@@ -907,14 +919,14 @@ generate_condition_and_action (struct easy_seccomp_ctx_s *ctx, struct condition_
       break;
 
     default:
-      set_error (ctx, "invalid condition type %d", c->type);
+      easy_seccomp_set_error (ctx, "invalid condition type %d", c->type);
       return -1;
     }
   return 0;
 }
 
 static struct rule_s *
-skip_directive (struct easy_seccomp_ctx_s *ctx, struct rule_s * it)
+skip_directive (struct easy_seccomp_ctx_s *ctx, struct rule_s *it)
 {
   int to_skip = 1;
   for (it = it->next; it; it = it->next)
@@ -935,18 +947,18 @@ skip_directive (struct easy_seccomp_ctx_s *ctx, struct rule_s * it)
     }
 
   if (it == NULL)
-    set_error (ctx, "directive `#%s` not ended", it->directive_name);
+    easy_seccomp_set_error (ctx, "directive not ended");
 
   return it;
 }
 
 int
-easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules)
+easy_seccomp_run (struct easy_seccomp_ctx_s *ctx)
 {
   struct rule_s *it;
   int directive_recursion = 0;
 
-  for (it = rules; it; it = it->next)
+  for (it = ctx->rules; it; it = it->next)
     {
       if (it->directive_name)
         {
@@ -956,7 +968,7 @@ easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules)
           if (ifdef || STREQ (it->directive_name, "ifndef"))
             {
               if (it->directive_value == NULL)
-                set_error (ctx, "invalid directive `#%s`", it->directive_name);
+                easy_seccomp_set_error (ctx, "invalid directive `#%s`", it->directive_name);
 
               /* Check if the directive value is set.  */
               if (ifdef == is_defined (ctx, it->directive_value))
@@ -972,7 +984,7 @@ easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules)
             {
               if (directive_recursion == 0)
                 {
-                  set_error (ctx, "invalid directive `#%s`", it->directive_name);
+                  easy_seccomp_set_error (ctx, "invalid directive `#%s`", it->directive_name);
                   return -1;
                 }
 
@@ -980,7 +992,7 @@ easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules)
             }
           else
             {
-              set_error (ctx, "unknown directive `#%s`", it->directive_name);
+              easy_seccomp_set_error (ctx, "unknown directive `#%s`", it->directive_name);
               return -1;
             }
 
@@ -993,5 +1005,45 @@ easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules)
         generate_action (ctx, it->action);
     }
 
+  return 0;
+}
+
+int
+easy_seccomp_compile (struct easy_seccomp_ctx_s *ctx, FILE *in, FILE *out)
+{
+  int ret;
+  yyscan_t scanner;
+
+  ret = yylex_init_extra (ctx, &scanner);
+  if (ret < 0)
+    {
+      easy_seccomp_set_error (ctx, "cannot initialize scanner");
+      return -1;
+    }
+
+  yyset_in (in, scanner);
+
+  ret = yyparse (scanner, ctx);
+  if (ret < 0)
+    {
+      yylex_destroy (scanner);
+      return ret;
+    }
+
+  ctx->out = out;
+
+  ret = easy_seccomp_run (ctx);
+  if (ret < 0)
+    {
+      yylex_destroy (scanner);
+      return ret;
+    }
+
+  ret = yylex_destroy (scanner);
+  if (ret < 0)
+    {
+      easy_seccomp_set_error (ctx, "cannot destroy scanner");
+      return -1;
+    }
   return 0;
 }

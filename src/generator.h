@@ -19,14 +19,17 @@
 #ifndef GENERATOR_H
 # define GENERATOR_H
 # include "types.h"
+# include <stdio.h>
 
 struct easy_seccomp_ctx_s;
 
 struct easy_seccomp_ctx_s *easy_seccomp_make_ctx ();
+void easy_seccomp_set_parser_rules (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules);
 void easy_seccomp_free_ctx (struct easy_seccomp_ctx_s *ctx);
 const char *easy_seccomp_get_last_error (struct easy_seccomp_ctx_s *ctx);
+void easy_seccomp_set_error (struct easy_seccomp_ctx_s *ctx, const char *fmt, ...);
 void easy_seccomp_define (struct easy_seccomp_ctx_s *ctx, const char *v);
 
-int easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules);
+int easy_seccomp_compile (struct easy_seccomp_ctx_s *ctx, FILE *in, FILE *out);
 
 #endif

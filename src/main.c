@@ -17,15 +17,12 @@
  */
 #include "types.h"
 #include "generator.h"
-#include "parser.h"
 
 #include <unistd.h>
 #include <stdio.h>
 #include <error.h>
 #include <stdlib.h>
 #include <argp.h>
-
-static struct easy_seccomp_ctx_s *ctx;
 
 const char *argp_program_version = "easyseccomp";
 const char *argp_program_bug_address = "<giuseppe@scrivano.org>";
@@ -48,6 +45,7 @@ argp_mandatory_argument (char *arg, struct argp_state *state)
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
+  struct easy_seccomp_ctx_s *ctx = state->input;
   switch (key)
     {
     case 'd':
@@ -70,39 +68,32 @@ parse_opt (int key, char *arg, struct argp_state *state)
   return 0;
 }
 
-void
-handle_and_exit (struct rule_s *rules)
-{
-  int ret;
-
-  ret = easy_seccomp_run (ctx, rules);
-  if (ret < 0)
-    {
-      fprintf (stderr, "%s\n", easy_seccomp_get_last_error (ctx));
-      easy_seccomp_free_ctx (ctx);
-      free_rules (rules);
-      exit (EXIT_FAILURE);
-    }
-
-  free_rules (rules);
-  easy_seccomp_free_ctx (ctx);
-  exit (EXIT_SUCCESS);
-}
-
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 
 int
 main (int argc, char **argv)
 {
-  ctx = easy_seccomp_make_ctx ();
-  if (ctx == NULL)
-    error (EXIT_FAILURE, errno, "create context");
-
-  argp_parse (&argp, argc, argv, 0, 0, NULL);
+  int ret;
+  struct easy_seccomp_ctx_s *ctx;
 
   if (isatty (1) && getenv ("FORCE_TTY") == NULL)
     error (EXIT_FAILURE, 0, "I refuse to write to a tty.  Redirect the output");
 
-  yyparse ();
+  ctx = easy_seccomp_make_ctx ();
+  if (ctx == NULL)
+    error (EXIT_FAILURE, errno, "create context");
+
+  argp_parse (&argp, argc, argv, 0, 0, ctx);
+
+  ret = easy_seccomp_compile (ctx, stdin, stdout);
+  if (ret < 0)
+    {
+      fprintf (stderr, "%s\n", easy_seccomp_get_last_error (ctx));
+      easy_seccomp_free_ctx (ctx);
+      exit (EXIT_FAILURE);
+    }
+
+  easy_seccomp_free_ctx (ctx);
+  exit (EXIT_SUCCESS);
   return 0;
 }

@@ -11,6 +11,7 @@ AM_SILENT_RULES([yes])
 AC_PROG_YACC
 AC_PROG_CC
 AC_PROG_LEX
+AC_PROG_RANLIB
 
 dnl libseccomp
 AC_ARG_ENABLE([seccomp],

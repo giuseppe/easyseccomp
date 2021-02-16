@@ -16,7 +16,7 @@
  * along with easyseccomp.  If not, see <http://www.gnu.org/licenses/>.
  */
 %{
-#include "parser.h"
+#include "libeasyseccomp_a-parser.h"
 #include "types.h"
 #include "generator.h"
 
@@ -48,17 +48,20 @@ safe_atoi (char *value)
 
 %}
 
+%option reentrant
 %option noyywrap
+%option bison-bridge
+%option extra-type="struct easy_seccomp_ctx_s *"
 
 %%
-KERNEL\([0-9]+(\.[0-9]+)+\)                      {yylval.str_value = xstrdup (skip_spaces (yytext)); return KERNEL;}
+KERNEL\([0-9]+(\.[0-9]+)+\)                      {yylval->str_value = xstrdup (skip_spaces (yytext)); return KERNEL;}
 "//".*                                            {}
-#[ ]*[A-Za-z_][A-Za-z0-9]+                        {yylval.str_value = xstrdup (skip_spaces (yytext+1)); return DIRECTIVE;}
-$[A-Za-z_][A-Za-z0-9]*                            {yylval.str_value = xstrdup (yytext); return NAME;}
-@[A-Za-z_][A-Za-z_0-9]*                           {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
-@[A-Za-z_][A-Za-z_0-9]*@[A-Za-z_][A-Za-z_0-9]*    {yylval.str_value = xstrdup (yytext); return CONST_NAME;}
-[A-Za-z_][A-Z_0-9]+                               {yylval.str_value = xstrdup (yytext); return UCASE_NAME;}
-[0-9]+                                            {yylval.int_value = safe_atoi (yytext); return NUM;}
+#[ ]*[A-Za-z_][A-Za-z0-9]+                        {yylval->str_value = xstrdup (skip_spaces (yytext+1)); return DIRECTIVE;}
+$[A-Za-z_][A-Za-z0-9]*                            {yylval->str_value = xstrdup (yytext); return NAME;}
+@[A-Za-z_][A-Za-z_0-9]*                           {yylval->str_value = xstrdup (yytext); return CONST_NAME;}
+@[A-Za-z_][A-Za-z_0-9]*@[A-Za-z_][A-Za-z_0-9]*    {yylval->str_value = xstrdup (yytext); return CONST_NAME;}
+[A-Za-z_][A-Z_0-9]+                               {yylval->str_value = xstrdup (yytext); return UCASE_NAME;}
+[0-9]+                                            {yylval->int_value = safe_atoi (yytext); return NUM;}
 &&                                                {return AND;}
 not                                               {return NOT;}
 in                                                {return IN;}

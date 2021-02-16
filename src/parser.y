@@ -25,15 +25,25 @@
 #include <stdlib.h>
 #include <argp.h>
 
-int yylex (); 
+typedef union YYSTYPE YYSTYPE;
+typedef void *yyscan_t;
+extern int yylex (YYSTYPE *yylval_param , yyscan_t yyscanner);
+
 void handle_and_exit (struct rule_s *rules);
-int yyerror (const char *p)
+int yyerror (yyscan_t scanner, struct easy_seccomp_ctx_s *ctx, const char *p)
 {
-  error (EXIT_FAILURE, 0, "%s", p);
+  easy_seccomp_set_error (ctx, "%s", p);
   return -1;
 }
 
 %}
+
+%define api.pure full
+%define parse.error verbose
+
+%lex-param {void *scanner}
+%parse-param {void *scanner}
+%parse-param {void *ctx}
 
 %union
  {
@@ -91,7 +101,7 @@ int yyerror (const char *p)
 %type <condition> and_bitwise
 %%
 
-run: rules {handle_and_exit ($1); exit (EXIT_FAILURE);}
+run: rules {easy_seccomp_set_parser_rules (ctx, $1);}
 
 rules: rule rules {$1->next = $2; $$ = $1;}
 | rule {$$ = $1;}
