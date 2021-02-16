@@ -145,3 +145,81 @@ make_value_from_int (int value)
   v->value = value;
   return v;
 }
+
+static void
+free_value (struct value_s *value)
+{
+  if (value == NULL)
+    return;
+
+  free (value->name);
+  free (value);
+}
+
+static void
+free_set (struct head_s *h)
+{
+  while (h)
+    {
+      struct head_s *n = h->next;
+      free_value (h->value);
+      free (h);
+      h = n;
+    }
+}
+
+static void
+free_condition (struct condition_s *condition)
+{
+  if (condition == NULL)
+    return;
+
+  if (condition->and_l)
+    free_condition (condition->and_l);
+  if (condition->and_r)
+    free_condition (condition->and_r);
+
+  if (condition->set)
+    free_set (condition->set);
+
+  if (condition->mask)
+    free_value (condition->mask);
+
+  if (condition->value)
+    free_value (condition->value);
+
+  free (condition->name);
+  free (condition->kernel);
+  free (condition);
+}
+
+static void
+free_action (struct action_s *action)
+{
+  if (action == NULL)
+    return;
+
+  free (action->name);
+  free (action->str_value);
+  free (action);
+}
+
+void
+free_rules (struct rule_s *rules)
+{
+  struct rule_s *it = rules;
+
+  while (it)
+    {
+      struct rule_s *n = it->next;
+
+      free_condition (it->condition);
+      free_action (it->action);
+      free (it->directive_name);
+      free (it->directive_value);
+
+      n = it->next;
+      free (it);
+      it = n;
+    }
+}

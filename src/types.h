@@ -100,4 +100,6 @@ struct value_s *make_value_from_int (int value);
 
 void handle (struct rule_s *rules);
 
+void free_rules (struct rule_s *rules);
+
 #endif

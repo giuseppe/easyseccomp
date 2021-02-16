@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <stdarg.h>
+
 
 /* libseccomp is used to resolve syscall names.  */
 #include <seccomp.h>
@@ -48,20 +50,78 @@
 #define VARIABLE_OFFSET(x) (x & 0xFF)
 #define MAKE_VARIABLE(t,i) ((t << 8) | (i & 0xFF))
 
+struct define_s
+{
+  struct define_s *next;
+  char *value;
+};
+
+struct easy_seccomp_ctx_s
+{
+  struct define_s *defines;
+  char *error;
+};
+
+struct easy_seccomp_ctx_s *
+easy_seccomp_make_ctx()
+{
+  return calloc (1, sizeof (struct easy_seccomp_ctx_s));
+}
+
+void
+easy_seccomp_free_ctx (struct easy_seccomp_ctx_s *ctx)
+{
+  struct define_s *it = ctx->defines;
+
+  while (it)
+    {
+      struct define_s *n = it->next;
+
+      free (it->value);
+
+      n = it->next;
+      free (it);
+      it = n;
+    }
+
+  free (ctx->error);
+  free (ctx);
+}
+
+static void
+set_error (struct easy_seccomp_ctx_s *ctx, const char *fmt, ...)
+{
+  va_list args_list;
+  char *msg = NULL;
+
+  va_start (args_list, fmt);
+
+  if (vasprintf (&msg, fmt, args_list) < 0)
+    {
+      va_end (args_list);
+      free (ctx->error);
+      ctx->error = xstrdup ("internal error");
+    }
+
+  va_end (args_list);
+
+  free (ctx->error);
+  ctx->error = msg;
+}
+
+
+const char *
+easy_seccomp_get_last_error (struct easy_seccomp_ctx_s *ctx)
+{
+  return ctx->error;
+}
+
 enum
   {
     VARIABLE_TYPE_ARCH = 1,
     VARIABLE_TYPE_SYSCALL = 2,
     VARIABLE_TYPE_ARG = 3,
   };
-
-struct define_s
-{
-  struct define_s *next;
-  const char *value;
-};
-
-struct define_s *defines;
 
 static void
 cleanup_freep (void *p)
@@ -71,11 +131,11 @@ cleanup_freep (void *p)
 }
 
 static int
-is_defined (const char *name)
+is_defined (struct easy_seccomp_ctx_s *ctx, const char *name)
 {
   struct define_s *it;
 
-  for (it = defines; it; it = it->next)
+  for (it = ctx->defines; it; it = it->next)
     {
       if (STREQ (it->value, name))
         return 1;
@@ -84,14 +144,14 @@ is_defined (const char *name)
 }
 
 void
-define (const char *v)
+easy_seccomp_define (struct easy_seccomp_ctx_s *ctx, const char *v)
 {
   struct define_s *d;
 
   d = xmalloc0 (sizeof (struct define_s));
-  d->next = defines;
-  d->value = v;
-  defines = d;
+  d->next = ctx->defines;
+  d->value = xstrdup (v);
+  ctx->defines = d;
 }
 
 static const char *
@@ -102,20 +162,24 @@ drop_prefix (const char *v, char p)
   return v;
 }
 
-static void
-emit (struct sock_filter *filter, size_t len)
+static int
+emit (struct easy_seccomp_ctx_s *ctx, struct sock_filter *filter, size_t len)
 {
   if (fwrite (filter, 1, len, stdout) != len)
-    abort ();
+    {
+      set_error (ctx, "failed to write to the destination");
+      return -1;
+    }
+  return 0;
 }
 
-static void
-emit_stmt (int code, int k)
+static int
+emit_stmt (struct easy_seccomp_ctx_s *ctx, int code, int k)
 {
   struct sock_filter stmt[] = {
     BPF_STMT (code, k)
   };
-  emit (stmt, sizeof (stmt[0]));
+  return emit (ctx, stmt, sizeof (stmt[0]));
 }
 
 static bool
@@ -128,7 +192,7 @@ multiplexed_syscall_p (int variable, int value)
 }
 
 static void
-multiplexed_syscall_ignored_warning (struct value_s *v)
+multiplexed_syscall_ignored_warning (struct easy_seccomp_ctx_s *ctx, struct value_s *v)
 {
   if (v->name)
     fprintf (stderr, "ignoring multiplexed syscall `%s`\n", drop_prefix (v->name, '@'));
@@ -137,20 +201,26 @@ multiplexed_syscall_ignored_warning (struct value_s *v)
 }
 
 static struct head_s *
-calculate_set_from_kernel_version (const char *version)
+calculate_set_from_kernel_version (struct easy_seccomp_ctx_s *ctx, const char *version)
 {
   char *endptr = NULL;
   struct head_s *h = NULL;
   int parts = 0, i, tmp, value = 0;
 
   if (strlen (version) < 10)
-    error (EXIT_FAILURE, 0, "invalid kernel version");
+    {
+      set_error (ctx, "invalid kernel version");
+      return NULL;
+    }
 
   version += strlen ("KERNEL(");
   while (*version)
     {
       if (parts++ > 4)
-        error (EXIT_FAILURE, 0, "invalid kernel version");
+        {
+          set_error (ctx, "invalid kernel version");
+          return NULL;
+        }
 
       tmp = strtol (version, &endptr, 10);
 
@@ -170,7 +240,9 @@ calculate_set_from_kernel_version (const char *version)
     {
       if (kernel_version_for_syscalls[i] <= value)
         {
-          struct value_s *v = make_value_from_name (xstrdup (kernel_syscalls[i]));
+          struct value_s *v;
+
+          v = make_value_from_name (xstrdup (kernel_syscalls[i]));
           h = make_set (v, h);
         }
     }
@@ -179,7 +251,7 @@ calculate_set_from_kernel_version (const char *version)
 }
 
 static int
-load_variable (const char *name)
+load_variable (struct easy_seccomp_ctx_s *ctx, const char *name)
 {
   int offset = 0;
   int type = 0;
@@ -226,14 +298,15 @@ load_variable (const char *name)
     }
   else
     {
-      error (EXIT_FAILURE, 0, "unknown variable `%s`", name);
+      set_error (ctx, "unknown variable `%s`", name);
+      return -1;
     }
 
   return MAKE_VARIABLE (type, offset);
 }
 
-static void
-emit_load (int what)
+static int
+emit_load (struct easy_seccomp_ctx_s *ctx, int what)
 {
   int offset = VARIABLE_OFFSET (what);
 
@@ -249,14 +322,16 @@ emit_load (int what)
       break;
 
     default:
-      error (EXIT_FAILURE, 0, "unknown variable type `%d`", VARIABLE_TYPE (what));
+      set_error (ctx, "unknown variable type `%d`", VARIABLE_TYPE (what));
+      return -1;
     }
 
-  emit_stmt (BPF_LD|BPF_W|BPF_ABS, offset);
+  emit_stmt (ctx, BPF_LD|BPF_W|BPF_ABS, offset);
+  return 0;
 }
 
 static int
-get_errno (struct action_s *a)
+get_errno (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
 {
   size_t i;
 
@@ -267,119 +342,144 @@ get_errno (struct action_s *a)
     if (STREQ (a->str_value, errnos[i].name))
       return errnos[i].value;
 
-  error (EXIT_FAILURE, 0, "unknown errno value `%s`", a->str_value);
+  set_error (ctx, "unknown errno value `%s`", a->str_value);
+  return -1;
+}
+
+static int
+generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
+{
+  if (STREQ (a->name, "ALLOW"))
+    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_ALLOW);
+  else if (STREQ (a->name, "TRAP"))
+    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_TRAP);
+  else if (STREQ (a->name, "NOTIFY"))
+    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_USER_NOTIF);
+  else if (STREQ (a->name, "LOG"))
+    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_LOG);
+  else if (STREQ (a->name, "KILL"))
+    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL);
+  else if (STREQ (a->name, "KILL_THREAD"))
+    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL_THREAD);
+  else if (STREQ (a->name, "KILL_PROCESS"))
+    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL_PROCESS);
+  else if (STREQ (a->name, "ERRNO"))
+    {
+      int e = get_errno (ctx, a);
+      if (e < 0)
+        return e;
+      emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_ERRNO|e);
+    }
+  else if (STREQ (a->name, "TRACE"))
+    {
+      int e = get_errno (ctx, a);
+      if (e < 0)
+        return e;
+      emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_TRACE|e);
+    }
+  else
+    {
+      set_error (ctx, "unknown action `%s`", a->name);
+      return -1;
+    }
+  return 0;
+}
+
+static int
+resolve_arch (struct easy_seccomp_ctx_s *ctx, const char *name, int *arch)
+{
+  name = drop_prefix (name, '@');
+
+  *arch = seccomp_arch_resolve_name (name);
+  if (*arch == 0)
+    {
+      set_error (ctx, "unknown arch `%s`", name);
+      return -1;
+    }
 
   return 0;
 }
 
-static void
-generate_action (struct action_s *a)
-{
-  if (STREQ (a->name, "ALLOW"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_ALLOW);
-  else if (STREQ (a->name, "TRAP"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_TRAP);
-  else if (STREQ (a->name, "NOTIFY"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_USER_NOTIF);
-  else if (STREQ (a->name, "LOG"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_LOG);
-  else if (STREQ (a->name, "KILL"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_KILL);
-  else if (STREQ (a->name, "KILL_THREAD"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_KILL_THREAD);
-  else if (STREQ (a->name, "KILL_PROCESS"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_KILL_PROCESS);
-  else if (STREQ (a->name, "ERRNO"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_ERRNO|get_errno (a));
-  else if (STREQ (a->name, "TRACE"))
-    emit_stmt (BPF_RET|BPF_K, SECCOMP_RET_TRACE|get_errno (a));
-  else
-    error (EXIT_FAILURE, 0, "unknown action `%s`", a->name);
-}
-
 static int
-resolve_arch (const char *name)
-{
-  int arch;
-
-  name = drop_prefix (name, '@');
-
-  arch = seccomp_arch_resolve_name (name);
-  if (arch == 0)
-    error (EXIT_FAILURE, 0, "unknown arch `%s`", name);
-
-  return arch;
-}
-
-static int
-resolve_syscall (const char *name)
+resolve_syscall (struct easy_seccomp_ctx_s *ctx, const char *name, int *syscall)
 {
   char buf[1024];
   char *arch_sep;
-  int syscall;
 
   name = drop_prefix (name, '@');
 
   if (strlen (name) > sizeof (buf) -1)
-    error (EXIT_FAILURE, 0, "invalid syscall `%s`", name);
+    {
+      set_error (ctx, "invalid syscall `%s`", name);
+      return -1;
+    }
 
   strcpy (buf, name);
 
   arch_sep = strchr (name, '@');
   if (arch_sep == NULL)
-    syscall = seccomp_syscall_resolve_name (name);
+    *syscall = seccomp_syscall_resolve_name (name);
   else
     {
-      int arch_token;
+      int ret, arch_token;
 
       *arch_sep = '\0';
 
-      arch_token = resolve_arch (arch_sep + 1);
+      ret = resolve_arch (ctx, arch_sep + 1, &arch_token);
+      if (ret < 0)
+        return ret;
 
-      syscall = seccomp_syscall_resolve_name_arch (arch_token, name);
+      *syscall = seccomp_syscall_resolve_name_arch (arch_token, name);
     }
 
-  if (syscall == __NR_SCMP_ERROR)
-    error (EXIT_FAILURE, 0, "unknown syscall `%s`", name);
-
-  return syscall;
-}
-
-static int
-read_value (struct value_s *v, int variable)
-{
-  if (v->name == NULL)
-    return v->value;
-
-  switch (VARIABLE_TYPE (variable))
+  if (*syscall == __NR_SCMP_ERROR)
     {
-    case VARIABLE_TYPE_ARCH:
-      return resolve_arch (v->name);
-
-    case VARIABLE_TYPE_SYSCALL:
-      return resolve_syscall (v->name);
-
-    case VARIABLE_TYPE_ARG:
-
-    default:
-      error (EXIT_FAILURE, 0, "unknown argument `%s`", v->name);
+      set_error (ctx, "unknown syscall `%s`", name);
+      return -1;
     }
 
   return 0;
 }
 
-static void
-generate_jump (int jump_len)
+static int
+read_value (struct easy_seccomp_ctx_s *ctx, struct value_s *v, int variable, int *out)
+{
+  if (v->name == NULL)
+    {
+      *out = v->value;
+      return 0;
+    }
+
+  switch (VARIABLE_TYPE (variable))
+    {
+    case VARIABLE_TYPE_ARCH:
+      return resolve_arch (ctx, v->name, out);
+
+    case VARIABLE_TYPE_SYSCALL:
+      return resolve_syscall (ctx, v->name, out);
+
+    case VARIABLE_TYPE_ARG:
+
+    default:
+      set_error (ctx, "unknown argument `%s`", v->name);
+      return -1;
+    }
+
+  return 0;
+}
+
+static int
+generate_jump (struct easy_seccomp_ctx_s *ctx, int jump_len)
 {
   struct sock_filter stmt[] = {
     BPF_JUMP(BPF_JMP|BPF_JA|BPF_K, jump_len, 0, 0),
   };
-  emit (stmt, sizeof (struct sock_filter));
+  return emit (ctx, stmt, sizeof (struct sock_filter));
 }
 
 /* generate a jump when the condition is not satisfied.  */
-static void
-generate_inverse_jump (int type, int value, int jump_len)
+static int
+generate_inverse_jump (struct easy_seccomp_ctx_s *ctx, int type, int value, int jump_len)
 {
   int jt = 0;
   int jf = 0;
@@ -418,92 +518,130 @@ generate_inverse_jump (int type, int value, int jump_len)
       break;
 
     default:
-      error (EXIT_FAILURE, 0, "invalid condition type %d", type);
+      set_error (ctx, "invalid condition type %d", type);
+      return -1;
     }
 
   struct sock_filter stmt[] = {
     BPF_JUMP(BPF_JMP|mask|BPF_K, value, jt, jf),
   };
-  emit (stmt, sizeof (struct sock_filter));
+  return emit (ctx, stmt, sizeof (struct sock_filter));
 }
 
-static void
-generate_masked_condition (struct condition_s *c, int jump_len)
+static int
+generate_masked_condition (struct easy_seccomp_ctx_s *ctx, struct condition_s *c, int jump_len)
 {
+  int ret;
   int value;
   int variable;
   int mask_value;
 
-  variable = load_variable (c->name);
+  variable = load_variable (ctx, c->name);
+  if (variable < 0)
+    return variable;
 
-  value = read_value (c->value, variable);
-  mask_value = read_value (c->mask, variable);
+  ret = read_value (ctx, c->value, variable, &value);
+  if (ret < 0)
+    return ret;
 
-  emit_load (variable);
-  emit_stmt (BPF_ALU|BPF_AND|BPF_IMM, mask_value);
+  ret = read_value (ctx, c->mask, variable, &mask_value);
+  if (ret < 0)
+    return ret;
 
-  generate_inverse_jump (c->mask_op, value, jump_len);
+  ret = emit_load (ctx, variable);
+  if (ret < 0)
+    return ret;
+
+  emit_stmt (ctx, BPF_ALU|BPF_AND|BPF_IMM, mask_value);
+
+  return generate_inverse_jump (ctx, c->mask_op, value, jump_len);
 }
 
-static void
-generate_simple_condition (struct condition_s *c, int jump_len)
+static int
+generate_simple_condition (struct easy_seccomp_ctx_s *ctx, struct condition_s *c, int jump_len)
 {
+  int ret;
   int value;
   int variable;
 
   if (c->type == TYPE_MASKED_EQ)
-    return generate_masked_condition (c, jump_len);
+    return generate_masked_condition (ctx, c, jump_len);
 
-  variable = load_variable (c->name);
+  variable = load_variable (ctx, c->name);
+  if (variable < 0)
+    return variable;
 
-  value = read_value (c->value, variable);
+  ret = read_value (ctx, c->value, variable, &value);
+  if (ret < 0)
+    return ret;
 
   if (multiplexed_syscall_p (variable, value))
     {
-      multiplexed_syscall_ignored_warning (c->value);
-      return;
+      multiplexed_syscall_ignored_warning (ctx, c->value);
+      return 0;
     }
 
-  emit_load (variable);
-  generate_inverse_jump (c->type, value, jump_len);
+  ret = emit_load (ctx, variable);
+  if (ret < 0)
+    return ret;
+
+  return generate_inverse_jump (ctx, c->type, value, jump_len);
 }
 
-static void
-linearize_and_conditions (struct condition_s *it, struct condition_s **conditions, ssize_t *so_far, ssize_t max)
+static int
+linearize_and_conditions (struct easy_seccomp_ctx_s *ctx, struct condition_s *it, struct condition_s **conditions, ssize_t *so_far, ssize_t max)
 {
   if (it->type == TYPE_AND)
     {
-      linearize_and_conditions (it->and_l, conditions, so_far, max);
-      linearize_and_conditions (it->and_r, conditions, so_far, max);
-      return;
+      int ret;
+
+      ret = linearize_and_conditions (ctx, it->and_l, conditions, so_far, max);
+      if (ret < 0)
+        return ret;
+
+      return linearize_and_conditions (ctx, it->and_r, conditions, so_far, max);
     }
   if (*so_far == max - 1)
-    error (EXIT_FAILURE, 0, "AND condition too long");
+    {
+      set_error (ctx, "AND condition too long");
+      return -1;
+    }
 
   if (it->type == TYPE_IN_SET || it->type == TYPE_NOT_IN_SET)
-    error (EXIT_FAILURE, 0, "complex conditions not supported with AND");
+    {
+      set_error (ctx, "complex conditions not supported with AND");
+      return -1;
+    }
 
   conditions[*so_far] = it;
   (*so_far)++;
+  return 0;
 }
 
-static void
-generate_and_condition_action (struct condition_s *c, struct action_s *a)
+static int
+generate_and_condition_action (struct easy_seccomp_ctx_s *ctx, struct condition_s *c, struct action_s *a)
 {
   const ssize_t MAX = 8;
   struct condition_s *conditions[MAX];
   int conditions_jmp[MAX+1];
   ssize_t i, total = 0;
+  int ret;
 
-  linearize_and_conditions (c, conditions, &total, MAX);
+  ret = linearize_and_conditions (ctx, c, conditions, &total, MAX);
+  if (ret < 0)
+    return ret;
 
   if (total == 0)
-    error (EXIT_FAILURE, 0, "internal error, no AND conditions found");
+    {
+      set_error (ctx, "internal error, no AND conditions found");
+      return -1;
+    }
 
   conditions_jmp[total - 1] = 1;
   for (i = total - 2; i >= 0; i--)
     {
       int length_op = 0;
+
       switch (conditions[i+1]->type)
         {
         case TYPE_MASKED_EQ:
@@ -523,16 +661,20 @@ generate_and_condition_action (struct condition_s *c, struct action_s *a)
         case TYPE_IN_SET:
         case TYPE_NOT_IN_SET:
         default:
-          error (EXIT_FAILURE, 0, "internal error, invalid condition type for AND");
-          break;
+          set_error (ctx, "internal error, invalid condition type for AND");
+          return -1;
         }
       conditions_jmp[i] = conditions_jmp[i+1] + length_op;
     }
 
   for (i = 0; i < total; i++)
-    generate_simple_condition (conditions[i], conditions_jmp[i]);
+    {
+      ret = generate_simple_condition (ctx, conditions[i], conditions_jmp[i]);
+      if (ret < 0)
+        return ret;
+    }
 
-  generate_action (a);
+  return generate_action (ctx, a);
 }
 
 static int
@@ -569,11 +711,13 @@ find_consecutive_range_length (size_t *values, size_t size)
   return size;
 }
 
-static void
-generate_condition_and_action (struct condition_s *c, struct action_s *a)
+static int
+generate_condition_and_action (struct easy_seccomp_ctx_s *ctx, struct condition_s *c, struct action_s *a)
 {
+  int ret;
+
   if (c == NULL)
-    return;
+    return 0;
 
   switch (c->type)
     {
@@ -584,31 +728,42 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         int variable;
         int value;
 
-        variable = load_variable (c->name);
+        variable = load_variable (ctx, c->name);
 
         set_len = set_calculate_len (c->set);
 
         /* Jumps are limited to 8 bits.  This can be fixed with
            an intermediate jump.  */
         if (set_len >= 256)
-          error (EXIT_FAILURE, 0, "set too big");
+          {
+            set_error (ctx, "set too big");
+            return -1;
+          }
 
-        emit_load (variable);
+        emit_load (ctx, variable);
 
         /* This could be implemented using ranges similarly to TYPE_IN_SET,
            but for now convert to a series of disequalities.  */
         for (set = c->set; set; set = set->next)
           {
-            value = read_value (set->value, variable);
-            generate_inverse_jump (TYPE_NE, value, set_len);
+            ret = read_value (ctx, set->value, variable, &value);
+            if (ret < 0)
+              return ret;
+
+            ret = generate_inverse_jump (ctx, TYPE_NE, value, set_len);
+            if (ret < 0)
+              return ret;
+
             set_len--;
           }
 
-        generate_action (a);
+        generate_action (ctx, a);
       }
       break;
     case TYPE_IN_KERNEL:
-      c->set = calculate_set_from_kernel_version (c->kernel);
+      c->set = calculate_set_from_kernel_version (ctx, c->kernel);
+      if (c->set == NULL)
+        return -1;
         __attribute__ ((fallthrough));
     case TYPE_IN_SET:
       {
@@ -623,7 +778,9 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         size_t value;
         size_t i;
 
-        variable = load_variable (c->name);
+        variable = load_variable (ctx, c->name);
+        if (variable < 0)
+          return variable;
 
         set_len = set_calculate_len (c->set);
 
@@ -632,11 +789,17 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
 
         for (set = c->set, i = 0; set; set = set->next)
           {
-            values[i] = read_value (set->value, variable);
+            int v;
+
+            ret = read_value (ctx, set->value, variable, &v);
+            if (ret < 0)
+              return ret;
+
+            values[i] = v;
 
             if (multiplexed_syscall_p (variable, values[i]))
               {
-                multiplexed_syscall_ignored_warning (set->value);
+                multiplexed_syscall_ignored_warning (ctx, set->value);
                 continue;
               }
 
@@ -648,7 +811,9 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
         qsort (values, set_len, sizeof (size_t), cmp_size_t);
         values_it = values;
 
-        emit_load (variable);
+        ret = emit_load (ctx, variable);
+        if (ret < 0)
+          return ret;
 
         /* Jumps are limited to 8 bits.  */
         while (set_len > 0)
@@ -671,8 +836,12 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
                     BPF_JUMP(BPF_JMP|BPF_JGE|BPF_K, first_value, 0, 2),
                     BPF_JUMP(BPF_JMP|BPF_JGT|BPF_K, last_value, 1, 0),
                   };
-                emit (stmt, sizeof (stmt));
-                generate_action (a);
+                ret = emit (ctx, stmt, sizeof (stmt));
+                if (ret < 0)
+                  return ret;
+                ret = generate_action (ctx, a);
+                if (ret < 0)
+                  return ret;
               }
 
             values_it += range_len;
@@ -691,16 +860,25 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
             for (i = 0; i < subset_len; i++)
               {
                 value = *(values_it++);
-                generate_inverse_jump (TYPE_NE, value, subset_len - i);
+                ret = generate_inverse_jump (ctx, TYPE_NE, value, subset_len - i);
+                if (ret < 0)
+                  return ret;
               }
-            generate_jump (1);
-            generate_action (a);
+            ret = generate_jump (ctx, 1);
+            if (ret < 0)
+              return ret;
+
+            ret = generate_action (ctx, a);
+            if (ret < 0)
+              return ret;
           }
       }
       break;
 
     case TYPE_AND:
-      generate_and_condition_action (c, a);
+      ret = generate_and_condition_action (ctx, c, a);
+      if (ret < 0)
+        return ret;
       break;
 
     case TYPE_EQ:
@@ -709,23 +887,34 @@ generate_condition_and_action (struct condition_s *c, struct action_s *a)
     case TYPE_LE:
     case TYPE_GT:
     case TYPE_GE:
-      generate_simple_condition (c, 1);
-      generate_action (a);
+      ret = generate_simple_condition (ctx, c, 1);
+      if (ret < 0)
+        return ret;
+
+      ret = generate_action (ctx, a);
+      if (ret < 0)
+        return ret;
       break;
 
     case TYPE_MASKED_EQ:
-      generate_masked_condition (c, 1);
-      generate_action (a);
+      ret = generate_masked_condition (ctx, c, 1);
+      if (ret < 0)
+        return ret;
+
+      ret = generate_action (ctx, a);
+      if (ret < 0)
+        return ret;
       break;
 
     default:
-      error (EXIT_FAILURE, 0, "invalid condition type %d", c->type);
-      break;
+      set_error (ctx, "invalid condition type %d", c->type);
+      return -1;
     }
+  return 0;
 }
 
 static struct rule_s *
-skip_directive (struct rule_s * it)
+skip_directive (struct easy_seccomp_ctx_s *ctx, struct rule_s * it)
 {
   int to_skip = 1;
   for (it = it->next; it; it = it->next)
@@ -746,13 +935,13 @@ skip_directive (struct rule_s * it)
     }
 
   if (it == NULL)
-    error (EXIT_FAILURE, 0, "directive `#%s` not ended", it->directive_name);
+    set_error (ctx, "directive `#%s` not ended", it->directive_name);
 
   return it;
 }
 
-void
-handle (struct rule_s *rules)
+int
+easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules)
 {
   struct rule_s *it;
   int directive_recursion = 0;
@@ -767,30 +956,42 @@ handle (struct rule_s *rules)
           if (ifdef || STREQ (it->directive_name, "ifndef"))
             {
               if (it->directive_value == NULL)
-                error (EXIT_FAILURE, 0, "invalid directive `#%s`", it->directive_name);
+                set_error (ctx, "invalid directive `#%s`", it->directive_name);
 
               /* Check if the directive value is set.  */
-              if (ifdef == is_defined (it->directive_value))
+              if (ifdef == is_defined (ctx, it->directive_value))
                 directive_recursion++;
               else
-                it = skip_directive (it);
+                {
+                  it = skip_directive (ctx, it);
+                  if (it == NULL)
+                    return -1;
+                }
             }
           else if (STREQ (it->directive_name, "endif"))
             {
               if (directive_recursion == 0)
-                error (EXIT_FAILURE, 0, "invalid directive `#%s`", it->directive_name);
+                {
+                  set_error (ctx, "invalid directive `#%s`", it->directive_name);
+                  return -1;
+                }
 
               directive_recursion--;
             }
           else
-            error (EXIT_FAILURE, 0, "unknown directive `#%s`", it->directive_name);
+            {
+              set_error (ctx, "unknown directive `#%s`", it->directive_name);
+              return -1;
+            }
 
           continue;
         }
 
       if (it->condition)
-        generate_condition_and_action (it->condition, it->action);
+        generate_condition_and_action (ctx, it->condition, it->action);
       else
-        generate_action (it->action);
+        generate_action (ctx, it->action);
     }
+
+  return 0;
 }

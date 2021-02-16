@@ -20,7 +20,13 @@
 # define GENERATOR_H
 # include "types.h"
 
-void handle (struct rule_s *rules);
-void define (const char *v);
+struct easy_seccomp_ctx_s;
+
+struct easy_seccomp_ctx_s *easy_seccomp_make_ctx ();
+void easy_seccomp_free_ctx (struct easy_seccomp_ctx_s *ctx);
+const char *easy_seccomp_get_last_error (struct easy_seccomp_ctx_s *ctx);
+void easy_seccomp_define (struct easy_seccomp_ctx_s *ctx, const char *v);
+
+int easy_seccomp_run (struct easy_seccomp_ctx_s *ctx, struct rule_s *rules);
 
 #endif

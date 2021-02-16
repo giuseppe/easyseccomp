@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <argp.h>
 
+static struct easy_seccomp_ctx_s *ctx;
 
 const char *argp_program_version = "easyseccomp";
 const char *argp_program_bug_address = "<giuseppe@scrivano.org>";
@@ -53,7 +54,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
       arg = argp_mandatory_argument (arg, state);
       if (arg == NULL)
           argp_usage (state);
-      define (arg);
+      easy_seccomp_define (ctx, arg);
       break;
 
     case ARGP_KEY_ARG:
@@ -68,7 +69,26 @@ parse_opt (int key, char *arg, struct argp_state *state)
     }
   return 0;
 }
- 
+
+static void
+handle_and_exit (struct rule_s *rules)
+{
+  int ret;
+
+  ret = easy_seccomp_run (ctx, rules);
+  if (ret < 0)
+    {
+      fprintf (stderr, "%s\n", easy_seccomp_get_last_error (ctx));
+      easy_seccomp_free_ctx (ctx);
+      free_rules (rules);
+      exit (EXIT_FAILURE);
+    }
+
+  free_rules (rules);
+  easy_seccomp_free_ctx (ctx);
+  exit (EXIT_SUCCESS);
+}
+
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 
 int yylex (); 
@@ -135,7 +155,7 @@ int yyerror (const char *p)
 %type <condition> and_bitwise
 %%
 
-run: rules {handle ($1); exit (0);}
+run: rules {handle_and_exit ($1); exit (EXIT_FAILURE);}
 
 rules: rule rules {$1->next = $2; $$ = $1;}
 | rule {$$ = $1;}
@@ -199,6 +219,10 @@ value: CONST_NAME {$$ = make_value_from_name ($1);}
 int
 main (int argc, char **argv)
 {
+  ctx = easy_seccomp_make_ctx ();
+  if (ctx == NULL)
+    error (EXIT_FAILURE, errno, "create context");
+
   argp_parse (&argp, argc, argv, 0, 0, NULL);
 
   if (isatty (1) && getenv ("FORCE_TTY") == NULL)
