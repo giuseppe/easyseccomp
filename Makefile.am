@@ -1,6 +1,6 @@
 bin_PROGRAMS = easyseccomp sim
 
-easyseccomp_SOURCES = src/generator.c src/types.c src/parser.y src/lexer.l src/syscall-versions/syscall-versions.c
+easyseccomp_SOURCES = src/generator.c src/types.c src/parser.y src/lexer.l src/syscall-versions/syscall-versions.c src/main.c
 sim_SOURCES = src/sim/sim.c src/sim/bpf_filter.c
 
 AM_YFLAGS = -d
