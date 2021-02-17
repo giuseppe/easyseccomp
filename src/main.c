@@ -81,14 +81,14 @@ main (int argc, char **argv)
   int ret;
   struct easy_seccomp_ctx_s *ctx;
 
-  if (isatty (1) && getenv ("FORCE_TTY") == NULL)
-    error (EXIT_FAILURE, 0, "I refuse to write to a tty.  Redirect the output");
-
   ctx = easy_seccomp_make_ctx ();
   if (ctx == NULL)
     error (EXIT_FAILURE, errno, "create context");
 
   argp_parse (&argp, argc, argv, 0, 0, ctx);
+
+  if (isatty (1) && getenv ("FORCE_TTY") == NULL)
+    error (EXIT_FAILURE, 0, "I refuse to write to a tty.  Redirect the output");
 
   ret = easy_seccomp_compile (ctx, stdin, stdout);
   if (ret < 0)
