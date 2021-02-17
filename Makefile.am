@@ -1,8 +1,9 @@
-bin_PROGRAMS = easyseccomp sim
+bin_PROGRAMS = easyseccomp sim disassemble
 
 noinst_LIBRARIES = libeasyseccomp.a
 
 sim_SOURCES = src/sim/sim.c src/sim/bpf_filter.c
+disassemble_SOURCES = src/disassemble/disassemble.c
 
 easyseccomp_SOURCES = src/main.c
 easyseccomp_LDADD = libeasyseccomp.a

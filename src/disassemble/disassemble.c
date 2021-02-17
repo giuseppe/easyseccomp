@@ -216,7 +216,7 @@ disassemble (int fd, int raw)
             case BPF_RET:
               class = "BPF_RET";
               if (BPF_SRC (f.code) != BPF_K)
-                printf ("%s\n", class, f.k);
+                printf ("%s\n", class);
               else
                 {
 
