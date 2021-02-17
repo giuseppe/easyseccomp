@@ -1,4 +1,5 @@
-bin_PROGRAMS = easyseccomp sim disassemble
+bin_PROGRAMS = easyseccomp
+noinst_PROGRAMS = sim disassemble
 
 noinst_LIBRARIES = libeasyseccomp.a
 
