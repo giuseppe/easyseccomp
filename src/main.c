@@ -31,6 +31,8 @@ static char args_doc[] = "[OPTION..]";
 static struct argp_option options[] =
   {
     {"define", 'd', "NAME", 0, "Define a symbol (used for #if(n)def directives)", 0},
+    {"input", 'i', "FILE", 0, "Input file (default stdin)", 0},
+    {"output", 'o', "FILE", 0, "Output file (default stdout)", 0},
     {"verbose", 'v', NULL, 0, "Enable warnings", 0},
     {0}
   };
@@ -43,21 +45,52 @@ argp_mandatory_argument (char *arg, struct argp_state *state)
   return state->argv[state->next++];
 }
 
+struct context_s
+{
+  struct easy_seccomp_ctx_s *ctx;
+  FILE *input;
+  FILE *output;
+};
+
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
-  struct easy_seccomp_ctx_s *ctx = state->input;
+  struct context_s *ctx = state->input;
   switch (key)
     {
     case 'd':
       arg = argp_mandatory_argument (arg, state);
       if (arg == NULL)
           argp_usage (state);
-      easy_seccomp_define (ctx, arg);
+      easy_seccomp_define (ctx->ctx, arg);
       break;
 
     case 'v':
-      easy_seccomp_set_verbose (ctx, true);
+      easy_seccomp_set_verbose (ctx->ctx, true);
+      break;
+
+    case 'i':
+      arg = argp_mandatory_argument (arg, state);
+      if (arg == NULL)
+          argp_usage (state);
+      ctx->input = fopen (arg, "r");
+      if (ctx->input == NULL)
+        {
+          fprintf (stderr, "cannot open: %s: %s\n", arg, strerror (errno));
+          exit (EXIT_FAILURE);
+        }
+      break;
+
+    case 'o':
+      arg = argp_mandatory_argument (arg, state);
+      if (arg == NULL)
+          argp_usage (state);
+      ctx->output = fopen (arg, "w+");
+      if (ctx->output == NULL)
+        {
+          fprintf (stderr, "cannot open: %s: %s\n", arg, strerror (errno));
+          exit (EXIT_FAILURE);
+        }
       break;
 
     case ARGP_KEY_ARG:
@@ -79,26 +112,35 @@ int
 main (int argc, char **argv)
 {
   int ret;
-  struct easy_seccomp_ctx_s *ctx;
+  struct context_s context;
+  struct easy_seccomp_ctx_s *easyseccomp_ctx;
 
-  ctx = easy_seccomp_make_ctx ();
-  if (ctx == NULL)
+  easyseccomp_ctx = easy_seccomp_make_ctx ();
+  if (easyseccomp_ctx == NULL)
     error (EXIT_FAILURE, errno, "create context");
 
-  argp_parse (&argp, argc, argv, 0, 0, ctx);
+  context.ctx = easyseccomp_ctx;
+  context.input = stdin;
+  context.output = stdout;
 
-  if (isatty (1) && getenv ("FORCE_TTY") == NULL)
+  argp_parse (&argp, argc, argv, 0, 0, &context);
+
+  if (isatty (fileno (context.output)) && getenv ("FORCE_TTY") == NULL)
     error (EXIT_FAILURE, 0, "I refuse to write to a tty.  Redirect the output");
 
-  ret = easy_seccomp_compile (ctx, stdin, stdout);
+  ret = easy_seccomp_compile (context.ctx, context.input, context.output);
   if (ret < 0)
     {
-      fprintf (stderr, "%s\n", easy_seccomp_get_last_error (ctx));
-      easy_seccomp_free_ctx (ctx);
+      fprintf (stderr, "%s\n", easy_seccomp_get_last_error (context.ctx));
+      easy_seccomp_free_ctx (context.ctx);
+      fclose (context.input);
+      fclose (context.output);
       exit (EXIT_FAILURE);
     }
 
-  easy_seccomp_free_ctx (ctx);
+  easy_seccomp_free_ctx (context.ctx);
+  fclose (context.input);
+  fclose (context.output);
   exit (EXIT_SUCCESS);
   return 0;
 }
