@@ -1,0 +1,6 @@
+#ifdef NEVER_ALLOWED
+#ifdef ALLOW_MKDIR
+$syscall == @mkdir => ALLOW();
+#endif
+#endif
+=> ERRNO(EPERM);

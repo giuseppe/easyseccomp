@@ -1,0 +1,4 @@
+// this is a comment to ignore
+$syscall == @mkdir => ALLOW();
+// this is another comment to ignore
+=> ERRNO(EPERM);

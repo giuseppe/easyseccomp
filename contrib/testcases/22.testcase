@@ -1,0 +1,2 @@
+$syscall in KERNEL(5.1) => ALLOW();
+=> ERRNO(ENOSYS);

@@ -1,0 +1,2 @@
+$syscall in (@mkdir, @unlink, @close) => ALLOW();
+=> ERRNO(ENOSYS);

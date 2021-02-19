@@ -1,0 +1,7 @@
+$arg0 == 1 => ERRNO(10);
+$arg1 == 1 => ERRNO(20);
+$arg2 == 1 => ERRNO(30);
+$arg3 == 1 => ERRNO(40);
+$arg4 == 1 => ERRNO(50);
+$arg5 == 1 => ERRNO(60);
+=> ALLOW();

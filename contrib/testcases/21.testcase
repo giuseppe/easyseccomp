@@ -1,0 +1,3 @@
+$arg0 > 10 => ERRNO(11);
+$arg0 >= 5 => ERRNO(10);
+=> ALLOW();

@@ -1,0 +1,3 @@
+$syscall in (@dup, @accept, @socket) => ERRNO(ENOENT);
+$syscall in (@mkdir, @unlink, @close) => ALLOW();
+=> ERRNO(EIO);
