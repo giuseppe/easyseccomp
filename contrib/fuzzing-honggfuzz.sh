@@ -2,5 +2,7 @@
 
 set -euxo pipefail
 
-./configure CC=hfuzz-cc
-honggfuzz -i contrib/testcases --  ./easyseccomp -i ___FILE___ -o /dev/null
+./configure CC=hfuzz-clang CPPFLAGS="-DFUZZER"
+make clean
+make -j $(nproc)
+EASYSECCOMP_FUZZ=1 honggfuzz --timeout=10 -i contrib/testcases --  ./easyseccomp

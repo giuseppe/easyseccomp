@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <error.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <argp.h>
 
 const char *argp_program_version = "easyseccomp";
@@ -109,11 +110,52 @@ parse_opt (int key, char *arg, struct argp_state *state)
 static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
 
 int
+LLVMFuzzerInitialize(int *argc, char ***argv)
+{
+  return 0;
+}
+
+int
+LLVMFuzzerTestOneInput (uint8_t *buf, size_t len)
+{
+  struct easy_seccomp_ctx_s *easyseccomp_ctx;
+  FILE *stream;
+
+  easyseccomp_ctx = easy_seccomp_make_ctx ();
+  if (easyseccomp_ctx == NULL)
+    return 0;
+
+  stream = fmemopen (buf, len, "r");
+  easy_seccomp_compile (easyseccomp_ctx, stream, stdout);
+
+  easy_seccomp_free_ctx (easyseccomp_ctx);
+  fclose (stream);
+  return 0;
+}
+
+int
 main (int argc, char **argv)
 {
   int ret;
   struct context_s context;
   struct easy_seccomp_ctx_s *easyseccomp_ctx;
+
+#ifdef FUZZER
+  if (getenv ("EASYSECCOMP_FUZZ"))
+    {
+      extern void HF_ITER (uint8_t** buf, size_t* len);
+      for (;;)
+        {
+          size_t len;
+          uint8_t *buf;
+
+          HF_ITER (&buf, &len);
+
+          LLVMFuzzerTestOneInput (buf, len);
+          
+	}
+    }
+#endif
 
   easyseccomp_ctx = easy_seccomp_make_ctx ();
   if (easyseccomp_ctx == NULL)
