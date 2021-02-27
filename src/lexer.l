@@ -41,7 +41,7 @@ safe_atoi (char *value)
   errno = 0;
   ret = strtol (value, &endptr, 10);
   if (errno == ERANGE || *endptr != '\0')
-    error (EXIT_FAILURE, 0, "invalid value `%s` specified", value);
+    return -1;
 
   return ret;
 }
