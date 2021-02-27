@@ -1049,10 +1049,10 @@ easy_seccomp_compile (struct easy_seccomp_ctx_s *ctx, FILE *in, FILE *out)
   ctx->out = out;
 
   ret = easy_seccomp_run (ctx);
-  if (ret < 0)
+  if (ret < 0 || ctx->error != NULL)
     {
       yylex_destroy (scanner);
-      return ret;
+      return -1;
     }
 
   ret = yylex_destroy (scanner);

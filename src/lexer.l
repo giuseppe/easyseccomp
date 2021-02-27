@@ -54,7 +54,7 @@ safe_atoi (char *value)
 %option extra-type="struct easy_seccomp_ctx_s *"
 
 %%
-KERNEL\([0-9]+(\.[0-9]+)+\)                      {yylval->str_value = xstrdup (skip_spaces (yytext)); return KERNEL;}
+KERNEL\([0-9]+(\.[0-9]+)+\)                       {yylval->str_value = xstrdup (skip_spaces (yytext)); return KERNEL;}
 "//".*                                            {}
 #[ ]*[A-Za-z_][A-Za-z0-9]+                        {yylval->str_value = xstrdup (skip_spaces (yytext+1)); return DIRECTIVE;}
 $[A-Za-z_][A-Za-z0-9]*                            {yylval->str_value = xstrdup (yytext); return NAME;}
@@ -78,5 +78,5 @@ in                                                {return IN;}
 ","                                               {return COMMA;}
 \;                                                {return EOL;}
 [ \t\n]+                                          {}
-.                                                 {error (EXIT_FAILURE, 0, "unrecognized token");}
+.                                                 {return -1;}
 %%
