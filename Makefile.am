@@ -14,8 +14,8 @@ libeasyseccomp_a_LFLAGS = --header-file=$(abs_builddir)/src/libeasyseccomp_a-lex
 libeasyseccomp_a_YFLAGS = -d -Wno-yacc
 libeasyseccomp_a_CFLAGS = -I $(abs_srcdir)/src -I $(abs_builddir)/src
 
-src/generator.c: src/libeasyseccomp_a-parser.h
-
+src/libeasyseccomp_a-lexer.h: src/libeasyseccomp_a-parser.h
+src/generator.c: src/libeasyseccomp_a-lexer.h
 
 LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) $(top_srcdir)/build-aux/tap-driver.sh
 

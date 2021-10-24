@@ -454,6 +454,7 @@ kernel_syscalls[] =
     "timerfd_settime64", /* v5.1 */
     "utimensat_time64", /* v5.1 */
     "clone3", /* v5.3 */
+    "close_range", /* v5.9 */
     "faccessat2", /* v5.8 */
     "fsconfig", /* v5.2 */
     "fsmount", /* v5.2 */
@@ -464,6 +465,14 @@ kernel_syscalls[] =
     "openat2", /* v5.6 */
     "pidfd_getfd", /* v5.6 */
     "pidfd_open", /* v5.3 */
+    "process_madvise", /* v5.10 */
+    "epoll_pwait2", /* v5.11 */
+    "mount_setattr", /* v5.12 */
+    "landlock_add_rule", /* v5.13 */
+    "landlock_create_ruleset", /* v5.13 */
+    "landlock_restrict_self", /* v5.13 */
+    "memfd_secret", /* v5.14 */
+    "quotactl_fd", /* v5.14 */
     0
 };
 
@@ -923,6 +932,7 @@ kernel_version_for_syscalls[] =
     83951616, /* v5.1 */
     83951616, /* v5.1 */
     84082688, /* v5.3 */
+    84475904, /* v5.9 */
     84410368, /* v5.8 */
     84017152, /* v5.2 */
     84017152, /* v5.2 */
@@ -933,5 +943,13 @@ kernel_version_for_syscalls[] =
     84279296, /* v5.6 */
     84279296, /* v5.6 */
     84082688, /* v5.3 */
+    84541440, /* v5.10 */
+    84606976, /* v5.11 */
+    84672512, /* v5.12 */
+    84738048, /* v5.13 */
+    84738048, /* v5.13 */
+    84738048, /* v5.13 */
+    84803584, /* v5.14 */
+    84803584, /* v5.14 */
     0
 };
