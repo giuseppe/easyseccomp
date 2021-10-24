@@ -8,8 +8,7 @@ disassemble_SOURCES = src/disassemble/disassemble.c
 
 easyseccomp_SOURCES = src/main.c
 easyseccomp_LDADD = libeasyseccomp.a
-libeasyseccomp_a_SOURCES = src/lexer.l src/parser.y src/generator.c src/types.c src/syscall-versions/syscall-versions.c
-
+libeasyseccomp_a_SOURCES = src/parser.y src/lexer.l src/generator.c src/types.c src/syscall-versions/syscall-versions.c
 libeasyseccomp_a_LFLAGS = --header-file=$(abs_builddir)/src/libeasyseccomp_a-lexer.h
 libeasyseccomp_a_YFLAGS = -d -Wno-yacc
 libeasyseccomp_a_CFLAGS = -I $(abs_srcdir)/src -I $(abs_builddir)/src
