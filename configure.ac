@@ -13,6 +13,14 @@ AC_PROG_CC
 AC_PROG_LEX([noyywrap])
 AC_PROG_RANLIB
 
+if test x"$ac_cv_prog_LEX" = "x"; then
+      AC_MSG_ERROR([lex is required])
+fi
+
+if test x"$ac_cv_prog_YACC" = "x"; then
+      AC_MSG_ERROR([yacc is required])
+fi
+
 dnl libseccomp
 AC_ARG_ENABLE([seccomp],
 	AS_HELP_STRING([--disable-seccomp], [Ignore libseccomp and disable support]))
