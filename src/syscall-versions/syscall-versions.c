@@ -473,6 +473,7 @@ kernel_syscalls[] =
     "landlock_restrict_self", /* v5.13 */
     "memfd_secret", /* v5.14 */
     "quotactl_fd", /* v5.14 */
+    "process_mrelease", /* v5.15 */
     0
 };
 
@@ -951,5 +952,6 @@ kernel_version_for_syscalls[] =
     84738048, /* v5.13 */
     84803584, /* v5.14 */
     84803584, /* v5.14 */
+    84869120, /* v5.15 */
     0
 };
