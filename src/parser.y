@@ -107,7 +107,7 @@ rules: rule rules {$1->next = $2; $$ = $1;}
 | rule {$$ = $1;}
 
 rule: complex_condition THEN action EOL { $$ = make_rule ($1, $3, NULL); }
-| THEN action {$$ = make_rule (NULL, $2, NULL);}
+| THEN action EOL {$$ = make_rule (NULL, $2, NULL);}
 | directive {$$ = $1;}
 
 directive: DIRECTIVE {$$ = make_directive ($1, NULL);}
