@@ -379,18 +379,31 @@ generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
 {
   if (STREQ (a->name, "ALLOW"))
     emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_ALLOW);
+#ifdef SECCOMP_RET_TRAP
   else if (STREQ (a->name, "TRAP"))
     emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_TRAP);
+#endif
+#ifdef SECCOMP_RET_USER_NOTIF
   else if (STREQ (a->name, "NOTIFY"))
     emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_USER_NOTIF);
+#endif
+#ifdef SECCOMP_RET_LOG
   else if (STREQ (a->name, "LOG"))
     emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_LOG);
+#endif
+#ifdef SECCOMP_RET_KILL
   else if (STREQ (a->name, "KILL"))
     emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL);
+#endif
+#ifdef SECCOMP_RET_KILL_THREAD
   else if (STREQ (a->name, "KILL_THREAD"))
     emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL_THREAD);
+#endif
+#ifdef SECCOMP_RET_KILL_PROCESS
   else if (STREQ (a->name, "KILL_PROCESS"))
     emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL_PROCESS);
+#endif
+#ifdef SECCOMP_RET_ERRNO
   else if (STREQ (a->name, "ERRNO"))
     {
       int e = get_errno (ctx, a);
@@ -398,6 +411,8 @@ generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
         return e;
       emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_ERRNO|e);
     }
+#endif
+#ifdef SECCOMP_RET_TRACE
   else if (STREQ (a->name, "TRACE"))
     {
       int e = get_errno (ctx, a);
@@ -405,6 +420,7 @@ generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
         return e;
       emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_TRACE|e);
     }
+#endif
   else
     {
       easy_seccomp_set_error (ctx, "unknown action `%s`", a->name);

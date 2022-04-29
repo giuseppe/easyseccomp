@@ -162,23 +162,46 @@ const char *get_seccomp_action (u_int ret, int *errno_code)
 
   if (action == SECCOMP_RET_ALLOW)
     return "SECCOMP_RET_ALLOW";
+
+#ifdef SECCOMP_RET_TRAP
   if (action == SECCOMP_RET_TRAP)
     return "SECCOMP_RET_TRAP";
+#endif
+
+#ifdef SECCOMP_RET_USER_NOTIF
   if (action == SECCOMP_RET_USER_NOTIF)
     return "SECCOMP_RET_USER_NOTIF";
+#endif
+
+#ifdef SECCOMP_RET_KILL
   if (action == SECCOMP_RET_KILL)
     return "SECCOMP_RET_KILL";
+#endif
+
+#ifdef SECCOMP_RET_KILL_THREAD
   if (action == SECCOMP_RET_KILL_THREAD)
     return "SECCOMP_RET_KILL_THREAD";
+#endif
+
+#ifdef SECCOMP_RET_KILL_PROCESS
   if (action == SECCOMP_RET_KILL_PROCESS)
     return "SECCOMP_RET_KILL_PROCESS";
+#endif
+
+  /* From here there are listed the actions that use
+     an errno value.  */
 
   *errno_code = ret & 0xFFFF;
 
+#ifdef SECCOMP_RET_ERRNO
   if (action == SECCOMP_RET_ERRNO)
     return "SECCOMP_RET_ERRNO";
+#endif
+
+#ifdef SECCOMP_RET_TRACE
   if (action == SECCOMP_RET_TRACE)
     return "SECCOMP_RET_TRACE";
+#endif
 
   error (EXIT_FAILURE, 0, "invalid return code");
   return NULL;
