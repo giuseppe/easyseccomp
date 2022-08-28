@@ -216,8 +216,13 @@ int main (int argc, char **argv)
   u_int filter_res = 0;
   const char *action = NULL;
 
-  if (argc < 9)
-    error (EXIT_FAILURE, 0, "not enough parameters");
+  if (argc < 3)
+    {
+      error (0, 0, "not enough parameters passed");
+      if (argc > 0)
+        error (0, 0, "USAGE: %s SYSCALL_NUMBER ARCH ARGS...", argv[0]);
+      exit (EXIT_FAILURE);
+    }
 
   memset (&data, 0, sizeof (data));
 
@@ -225,7 +230,7 @@ int main (int argc, char **argv)
   data.arch = resolve_arch (argv[2]);
   data.instruction_pointer = 0x0;
   for (i = 0; i < 6; i++)
-    data.args[i] = atoi(argv[3 + i]);
+    data.args[i] = (3 + i < argc) ? atoi (argv[3 + i]) : 0;
 
   read_all_fd (0, "stdin", (u_char **) &program, &size);
 

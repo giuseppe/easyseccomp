@@ -58,7 +58,7 @@ If the `CONDITION` is not specified (`=> STATEMENT();`), then the
 |------------------|-------------------------------------------------------|
 | `ALLOW()`        | Allow the syscall                                     |
 | `TRAP()`         | Trap the syscall                                      |
-| `NOTIFY()`       | Handle the syscall through a  user space handler      |
+| `NOTIFY()`       | Handle the syscall through a user space handler       |
 | `LOG()`          | Log the syscall                                       |
 | `KILL()`         | Kill the process                                      |
 | `KILL_PROCESS()` | Kill the process                                      |
