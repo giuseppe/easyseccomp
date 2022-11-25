@@ -42,8 +42,9 @@ int
 main (int argc, char *argv[])
 {
   struct sock_fprog seccomp_filter;
+  void *addr = NULL;
   struct stat st;
-  void *addr;
+  size_t size;
   int fd;
   int r;
 
@@ -58,11 +59,33 @@ main (int argc, char *argv[])
   if (r < 0)
     error (EXIT_FAILURE, errno, "fstat `%s", argv[1]);
 
-  addr = mmap (NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-  if (addr == MAP_FAILED)
-    error (EXIT_FAILURE, errno, "mmap");
+  if (st.st_size > 0)
+    {
+      addr = mmap (NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+      if (addr == MAP_FAILED)
+        error (EXIT_FAILURE, errno, "mmap");
+      size = st.st_size;
+    }
+  else
+    {
+      size = 0;
+      for (;;)
+        {
+          addr = realloc (addr, size+4096);
+          if (addr == NULL)
+            error (EXIT_FAILURE, errno, "malloc");
 
-  seccomp_filter.len = st.st_size / 8;
+          do
+            r = read (fd, addr + size, 4096);
+          while (r < 0 && errno == EINTR);
+          if (r < 0)
+            error (EXIT_FAILURE, errno, "read");
+          if (r == 0)
+            break;
+          size += r;
+        }
+    }
+  seccomp_filter.len = size / 8;
   seccomp_filter.filter = (struct sock_filter *) addr;
 
   r = syscall_seccomp (SECCOMP_SET_MODE_FILTER, 0, &seccomp_filter);
@@ -75,9 +98,14 @@ main (int argc, char *argv[])
         error (EXIT_FAILURE, errno, "seccomp");
     }
 
-  r = munmap (addr, st.st_size);
-  if (r < 0)
-    error (EXIT_FAILURE, errno, "munmap");
+  if (st.st_size == 0)
+    free (addr);
+  else
+    {
+      r = munmap (addr, st.st_size);
+      if (r < 0)
+        error (EXIT_FAILURE, errno, "munmap");
+    }
 
   for (argc = 2; argv[argc]; argc++)
     argv[argc - 2] = argv[argc];
