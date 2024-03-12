@@ -1,7 +1,7 @@
 /*
  * easyseccomp
  *
- * Copyright (C) 2022 Giuseppe Scrivano <giuseppe@scrivano.org>
+ * Copyright (C) 2022, 2024 Giuseppe Scrivano <giuseppe@scrivano.org>
  * easyseccomp is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -48,7 +48,7 @@ main (int argc, char *argv[])
   int fd;
   int r;
 
-  if (argc < 0)
+  if (argc < 3)
     error (EXIT_FAILURE, 0, "usage: %s seccomp.bpf COMMAND ...", argv[0]);
 
   fd = open (argv[1], O_RDONLY|O_CLOEXEC);
