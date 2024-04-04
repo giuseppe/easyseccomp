@@ -51,7 +51,7 @@ main (int argc, char *argv[])
   if (argc < 3)
     error (EXIT_FAILURE, 0, "usage: %s seccomp.bpf COMMAND ...", argv[0]);
 
-  fd = open (argv[1], O_RDONLY|O_CLOEXEC);
+  fd = open (argv[1], O_RDONLY | O_CLOEXEC);
   if (fd < 0)
     error (EXIT_FAILURE, errno, "open `%s`", argv[1]);
 
@@ -71,7 +71,7 @@ main (int argc, char *argv[])
       size = 0;
       for (;;)
         {
-          addr = realloc (addr, size+4096);
+          addr = realloc (addr, size + 4096);
           if (addr == NULL)
             error (EXIT_FAILURE, errno, "malloc");
 

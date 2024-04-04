@@ -12,7 +12,7 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 
-#define STREQ(a,b) (strcmp (a,b) == 0)
+#define STREQ(a, b) (strcmp (a, b) == 0)
 
 int
 disassemble (int fd, int raw)
@@ -179,7 +179,6 @@ disassemble (int fd, int raw)
               op_jmp = "<unknown>";
               break;
             }
-
 
           switch (BPF_CLASS (f.code))
             {

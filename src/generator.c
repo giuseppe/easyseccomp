@@ -34,7 +34,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-
 /* libseccomp is used to resolve syscall names.  */
 #include <seccomp.h>
 
@@ -42,15 +41,15 @@
 
 #define min(a, b) ((a < b) ? a : b)
 
-#define STREQ(a,b) (strcmp (a,b) == 0)
+#define STREQ(a, b) (strcmp (a, b) == 0)
 
-#define syscall_arg(_n) (offsetof(struct seccomp_data, args[_n]))
-#define syscall_nr (offsetof(struct seccomp_data, nr))
-#define syscall_arch (offsetof(struct seccomp_data, arch))
+#define syscall_arg(_n) (offsetof (struct seccomp_data, args[_n]))
+#define syscall_nr (offsetof (struct seccomp_data, nr))
+#define syscall_arch (offsetof (struct seccomp_data, arch))
 
 #define VARIABLE_TYPE(x) ((x >> 8) & 0xFF)
 #define VARIABLE_OFFSET(x) (x & 0xFF)
-#define MAKE_VARIABLE(t,i) ((t << 8) | (i & 0xFF))
+#define MAKE_VARIABLE(t, i) ((t << 8) | (i & 0xFF))
 
 struct define_s
 {
@@ -68,7 +67,7 @@ struct easy_seccomp_ctx_s
 };
 
 struct easy_seccomp_ctx_s *
-easy_seccomp_make_ctx()
+easy_seccomp_make_ctx ()
 {
   return calloc (1, sizeof (struct easy_seccomp_ctx_s));
 }
@@ -122,7 +121,6 @@ easy_seccomp_set_error (struct easy_seccomp_ctx_s *ctx, const char *fmt, ...)
   ctx->error = msg;
 }
 
-
 const char *
 easy_seccomp_get_last_error (struct easy_seccomp_ctx_s *ctx)
 {
@@ -142,11 +140,11 @@ easy_seccomp_set_verbose (struct easy_seccomp_ctx_s *ctx, bool verbose)
 }
 
 enum
-  {
-    VARIABLE_TYPE_ARCH = 1,
-    VARIABLE_TYPE_SYSCALL = 2,
-    VARIABLE_TYPE_ARG = 3,
-  };
+{
+  VARIABLE_TYPE_ARCH = 1,
+  VARIABLE_TYPE_SYSCALL = 2,
+  VARIABLE_TYPE_ARG = 3,
+};
 
 static void
 cleanup_freep (void *p)
@@ -354,7 +352,7 @@ emit_load (struct easy_seccomp_ctx_s *ctx, int what)
       return -1;
     }
 
-  emit_stmt (ctx, BPF_LD|BPF_W|BPF_ABS, offset);
+  emit_stmt (ctx, BPF_LD | BPF_W | BPF_ABS, offset);
   return 0;
 }
 
@@ -378,30 +376,30 @@ static int
 generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
 {
   if (STREQ (a->name, "ALLOW"))
-    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_ALLOW);
+    emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_ALLOW);
 #ifdef SECCOMP_RET_TRAP
   else if (STREQ (a->name, "TRAP"))
-    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_TRAP);
+    emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_TRAP);
 #endif
 #ifdef SECCOMP_RET_USER_NOTIF
   else if (STREQ (a->name, "NOTIFY"))
-    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_USER_NOTIF);
+    emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_USER_NOTIF);
 #endif
 #ifdef SECCOMP_RET_LOG
   else if (STREQ (a->name, "LOG"))
-    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_LOG);
+    emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_LOG);
 #endif
 #ifdef SECCOMP_RET_KILL
   else if (STREQ (a->name, "KILL"))
-    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL);
+    emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_KILL);
 #endif
 #ifdef SECCOMP_RET_KILL_THREAD
   else if (STREQ (a->name, "KILL_THREAD"))
-    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL_THREAD);
+    emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_KILL_THREAD);
 #endif
 #ifdef SECCOMP_RET_KILL_PROCESS
   else if (STREQ (a->name, "KILL_PROCESS"))
-    emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_KILL_PROCESS);
+    emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_KILL_PROCESS);
 #endif
 #ifdef SECCOMP_RET_ERRNO
   else if (STREQ (a->name, "ERRNO"))
@@ -409,7 +407,7 @@ generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
       int e = get_errno (ctx, a);
       if (e < 0)
         return e;
-      emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_ERRNO|e);
+      emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_ERRNO | e);
     }
 #endif
 #ifdef SECCOMP_RET_TRACE
@@ -418,7 +416,7 @@ generate_action (struct easy_seccomp_ctx_s *ctx, struct action_s *a)
       int e = get_errno (ctx, a);
       if (e < 0)
         return e;
-      emit_stmt (ctx, BPF_RET|BPF_K, SECCOMP_RET_TRACE|e);
+      emit_stmt (ctx, BPF_RET | BPF_K, SECCOMP_RET_TRACE | e);
     }
 #endif
   else
@@ -452,7 +450,7 @@ resolve_syscall (struct easy_seccomp_ctx_s *ctx, const char *name, int *syscall)
 
   name = drop_prefix (name, '@');
 
-  if (strlen (name) > sizeof (buf) -1)
+  if (strlen (name) > sizeof (buf) - 1)
     {
       easy_seccomp_set_error (ctx, "invalid syscall `%s`", name);
       return -1;
@@ -516,7 +514,7 @@ static int
 generate_jump (struct easy_seccomp_ctx_s *ctx, int jump_len)
 {
   struct sock_filter stmt[] = {
-    BPF_JUMP(BPF_JMP|BPF_JA|BPF_K, jump_len, 0, 0),
+    BPF_JUMP (BPF_JMP | BPF_JA | BPF_K, jump_len, 0, 0),
   };
   return emit (ctx, stmt, sizeof (struct sock_filter));
 }
@@ -567,7 +565,7 @@ generate_inverse_jump (struct easy_seccomp_ctx_s *ctx, int type, int value, int 
     }
 
   struct sock_filter stmt[] = {
-    BPF_JUMP(BPF_JMP|mask|BPF_K, value, jt, jf),
+    BPF_JUMP (BPF_JMP | mask | BPF_K, value, jt, jf),
   };
   return emit (ctx, stmt, sizeof (struct sock_filter));
 }
@@ -596,7 +594,7 @@ generate_masked_condition (struct easy_seccomp_ctx_s *ctx, struct condition_s *c
   if (ret < 0)
     return ret;
 
-  emit_stmt (ctx, BPF_ALU|BPF_AND|BPF_IMM, mask_value);
+  emit_stmt (ctx, BPF_ALU | BPF_AND | BPF_IMM, mask_value);
 
   return generate_inverse_jump (ctx, c->mask_op, value, jump_len);
 }
@@ -667,7 +665,7 @@ generate_and_condition_action (struct easy_seccomp_ctx_s *ctx, struct condition_
 {
   const ssize_t MAX = 8;
   struct condition_s *conditions[MAX];
-  int conditions_jmp[MAX+1];
+  int conditions_jmp[MAX + 1];
   ssize_t i, total = 0;
   int ret;
 
@@ -686,7 +684,7 @@ generate_and_condition_action (struct easy_seccomp_ctx_s *ctx, struct condition_
     {
       int length_op = 0;
 
-      switch (conditions[i+1]->type)
+      switch (conditions[i + 1]->type)
         {
         case TYPE_MASKED_EQ:
           length_op = 3;
@@ -708,7 +706,7 @@ generate_and_condition_action (struct easy_seccomp_ctx_s *ctx, struct condition_
           easy_seccomp_set_error (ctx, "internal error, invalid condition type for AND");
           return -1;
         }
-      conditions_jmp[i] = conditions_jmp[i+1] + length_op;
+      conditions_jmp[i] = conditions_jmp[i + 1] + length_op;
     }
 
   for (i = 0; i < total; i++)
@@ -808,7 +806,7 @@ generate_condition_and_action (struct easy_seccomp_ctx_s *ctx, struct condition_
       c->set = calculate_set_from_kernel_version (ctx, c->kernel);
       if (c->set == NULL)
         return -1;
-        __attribute__ ((fallthrough));
+      __attribute__ ((fallthrough));
     case TYPE_IN_SET:
       {
         cleanup_free size_t *remaining = NULL;
@@ -875,11 +873,10 @@ generate_condition_and_action (struct easy_seccomp_ctx_s *ctx, struct condition_
               {
                 int first_value = values_it[0];
                 int last_value = first_value + range_len - 1;
-                struct sock_filter stmt[] =
-                  {
-                    BPF_JUMP(BPF_JMP|BPF_JGE|BPF_K, first_value, 0, 2),
-                    BPF_JUMP(BPF_JMP|BPF_JGT|BPF_K, last_value, 1, 0),
-                  };
+                struct sock_filter stmt[] = {
+                  BPF_JUMP (BPF_JMP | BPF_JGE | BPF_K, first_value, 0, 2),
+                  BPF_JUMP (BPF_JMP | BPF_JGT | BPF_K, last_value, 1, 0),
+                };
                 ret = emit (ctx, stmt, sizeof (stmt));
                 if (ret < 0)
                   return ret;

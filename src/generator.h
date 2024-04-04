@@ -17,10 +17,10 @@
  */
 
 #ifndef GENERATOR_H
-# define GENERATOR_H
-# include "types.h"
-# include <stdbool.h>
-# include <stdio.h>
+#define GENERATOR_H
+#include "types.h"
+#include <stdbool.h>
+#include <stdio.h>
 
 struct easy_seccomp_ctx_s;
 

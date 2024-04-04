@@ -36,7 +36,7 @@
 
 #ifndef TEMP_FAILURE_RETRY
 #  define TEMP_FAILURE_RETRY(expression)      \
-    (__extension__({                          \
+    (__extension__ ({                         \
       long int __result;                      \
       do                                      \
         __result = (long int) (expression);   \
@@ -46,7 +46,7 @@
 #endif
 
 static void
-OOM()
+OOM ()
 {
   error (EXIT_FAILURE, ENOMEM, "OOM");
 }
@@ -106,7 +106,8 @@ read_all_fd (int fd, const char *description, u_char **out, size_t *len)
     *len = nread;
 }
 
-unsigned int arc4random ()
+unsigned int
+arc4random ()
 {
   return random ();
 }
@@ -150,9 +151,10 @@ resolve_arch (const char *name)
 u_int bpf_filter (const struct bpf_insn *pc, const u_char *pkt,
                   u_int wirelen, u_int buflen);
 
-int bpf_validate(struct bpf_insn *f, int len);
+int bpf_validate (struct bpf_insn *f, int len);
 
-const char *get_seccomp_action (u_int ret, int *errno_code)
+const char *
+get_seccomp_action (u_int ret, int *errno_code)
 {
   u_int action;
 
@@ -207,7 +209,8 @@ const char *get_seccomp_action (u_int ret, int *errno_code)
   return NULL;
 }
 
-int main (int argc, char **argv)
+int
+main (int argc, char **argv)
 {
   struct seccomp_data data;
   struct bpf_insn *program;

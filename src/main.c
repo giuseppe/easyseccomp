@@ -29,14 +29,13 @@ const char *argp_program_version = "easyseccomp";
 const char *argp_program_bug_address = "<giuseppe@scrivano.org>";
 static char doc[] = "easyseccomp - easily generate seccomp bpf";
 static char args_doc[] = "[OPTION..]";
-static struct argp_option options[] =
-  {
-    {"define", 'd', "NAME", 0, "Define a symbol (used for #if(n)def directives)", 0},
-    {"input", 'i', "FILE", 0, "Input file (default stdin)", 0},
-    {"output", 'o', "FILE", 0, "Output file (default stdout)", 0},
-    {"verbose", 'v', NULL, 0, "Enable warnings", 0},
-    {0}
-  };
+static struct argp_option options[] = {
+  { "define", 'd', "NAME", 0, "Define a symbol (used for #if(n)def directives)", 0 },
+  { "input", 'i', "FILE", 0, "Input file (default stdin)", 0 },
+  { "output", 'o', "FILE", 0, "Output file (default stdout)", 0 },
+  { "verbose", 'v', NULL, 0, "Enable warnings", 0 },
+  { 0 }
+};
 
 static char *
 argp_mandatory_argument (char *arg, struct argp_state *state)
@@ -62,7 +61,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'd':
       arg = argp_mandatory_argument (arg, state);
       if (arg == NULL)
-          argp_usage (state);
+        argp_usage (state);
       easy_seccomp_define (ctx->ctx, arg);
       break;
 
@@ -73,7 +72,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'i':
       arg = argp_mandatory_argument (arg, state);
       if (arg == NULL)
-          argp_usage (state);
+        argp_usage (state);
       ctx->input = fopen (arg, "r");
       if (ctx->input == NULL)
         {
@@ -85,7 +84,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'o':
       arg = argp_mandatory_argument (arg, state);
       if (arg == NULL)
-          argp_usage (state);
+        argp_usage (state);
       ctx->output = fopen (arg, "w+");
       if (ctx->output == NULL)
         {
@@ -107,10 +106,10 @@ parse_opt (int key, char *arg, struct argp_state *state)
   return 0;
 }
 
-static struct argp argp = {options, parse_opt, args_doc, doc, NULL, NULL, NULL};
+static struct argp argp = { options, parse_opt, args_doc, doc, NULL, NULL, NULL };
 
 int
-LLVMFuzzerInitialize(int *argc, char ***argv)
+LLVMFuzzerInitialize (int *argc, char ***argv)
 {
   return 0;
 }
@@ -143,7 +142,7 @@ main (int argc, char **argv)
 #ifdef FUZZER
   if (getenv ("EASYSECCOMP_FUZZ"))
     {
-      extern void HF_ITER (uint8_t** buf, size_t* len);
+      extern void HF_ITER (uint8_t * *buf, size_t * len);
       for (;;)
         {
           size_t len;
@@ -152,8 +151,7 @@ main (int argc, char **argv)
           HF_ITER (&buf, &len);
 
           LLVMFuzzerTestOneInput (buf, len);
-          
-	}
+        }
     }
 #endif
 

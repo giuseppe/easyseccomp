@@ -41,7 +41,7 @@ make_set (struct value_s *value, struct head_s *next)
 {
   struct head_s *h = xmalloc0 (sizeof (struct head_s));
   h->value = value;
-  h->next =next;
+  h->next = next;
   return h;
 }
 
@@ -86,7 +86,6 @@ make_and_condition (struct condition_s *and_l, struct condition_s *and_r)
   c->and_r = and_r;
   return c;
 }
-
 
 struct condition_s *
 make_bitwise_eq_condition (char *name, struct value_s *mask, int op, struct value_s *value)

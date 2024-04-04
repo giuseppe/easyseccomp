@@ -16,21 +16,21 @@
  * along with easyseccomp.  If not, see <http://www.gnu.org/licenses/>.
  */
 #ifndef TYPES_H
-# define TYPES_H
+#define TYPES_H
 
-# include <string.h>
+#include <string.h>
 
-# define TYPE_IN_SET 1
-# define TYPE_NOT_IN_SET 2
-# define TYPE_AND 3
-# define TYPE_EQ 4
-# define TYPE_NE 5
-# define TYPE_LT 6
-# define TYPE_LE 7
-# define TYPE_GT 8
-# define TYPE_GE 9
-# define TYPE_MASKED_EQ 10
-# define TYPE_IN_KERNEL 11
+#define TYPE_IN_SET 1
+#define TYPE_NOT_IN_SET 2
+#define TYPE_AND 3
+#define TYPE_EQ 4
+#define TYPE_NE 5
+#define TYPE_LT 6
+#define TYPE_LE 7
+#define TYPE_GT 8
+#define TYPE_GE 9
+#define TYPE_MASKED_EQ 10
+#define TYPE_IN_KERNEL 11
 
 char *xstrdup (const char *v);
 void *xmalloc0 (size_t s);
@@ -43,8 +43,8 @@ struct value_s
 
 struct head_s
 {
-    struct head_s *next;
-    struct value_s *value;
+  struct head_s *next;
+  struct value_s *value;
 };
 
 struct action_s

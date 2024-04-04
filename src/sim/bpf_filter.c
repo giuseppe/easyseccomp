@@ -40,86 +40,87 @@
 #include <sys/param.h>
 #include <sys/time.h>
 #ifndef _KERNEL
-#include <stdlib.h>
-#include <string.h>
+#  include <stdlib.h>
+#  include <string.h>
 #else
-#include <sys/systm.h>
+#  include <sys/systm.h>
 #endif
 
 #ifdef _KERNEL
 extern int bpf_maxbufsize;
-#define Static
+#  define Static
 #else /* _KERNEL */
-#define Static static
+#  define Static static
 #endif /* _KERNEL */
 
 #include "bpf.h"
 
-struct bpf_mem {
-	const u_char	*pkt;
-	u_int		 len;
+struct bpf_mem
+{
+  const u_char *pkt;
+  u_int len;
 };
 
-Static u_int32_t	bpf_mem_ldw(const void *, u_int32_t, int *);
-Static u_int32_t	bpf_mem_ldh(const void *, u_int32_t, int *);
-Static u_int32_t	bpf_mem_ldb(const void *, u_int32_t, int *);
+Static u_int32_t bpf_mem_ldw (const void *, u_int32_t, int *);
+Static u_int32_t bpf_mem_ldh (const void *, u_int32_t, int *);
+Static u_int32_t bpf_mem_ldb (const void *, u_int32_t, int *);
 
 static const struct bpf_ops bpf_mem_ops = {
-	bpf_mem_ldw,
-	bpf_mem_ldh,
-	bpf_mem_ldb,
+  bpf_mem_ldw,
+  bpf_mem_ldh,
+  bpf_mem_ldb,
 };
 
 Static u_int32_t
-bpf_mem_ldw(const void *mem, u_int32_t k, int *err)
+bpf_mem_ldw (const void *mem, u_int32_t k, int *err)
 {
-	const struct bpf_mem *bm = mem;
-	u_int32_t v;
+  const struct bpf_mem *bm = mem;
+  u_int32_t v;
 
-	*err = 1;
+  *err = 1;
 
-	if (k + sizeof(v) > bm->len)
-		return (0);
+  if (k + sizeof (v) > bm->len)
+    return (0);
 
-	memcpy(&v, bm->pkt + k, sizeof(v));
+  memcpy (&v, bm->pkt + k, sizeof (v));
 
-	*err = 0;
-        /* no endianness conversions for seccomp: */
-	/* return ntohl(v);*/
-        return v;
+  *err = 0;
+  /* no endianness conversions for seccomp: */
+  /* return ntohl(v);*/
+  return v;
 }
 
 Static u_int32_t
-bpf_mem_ldh(const void *mem, u_int32_t k, int *err)
+bpf_mem_ldh (const void *mem, u_int32_t k, int *err)
 {
-	const struct bpf_mem *bm = mem;
-	u_int16_t v;
+  const struct bpf_mem *bm = mem;
+  u_int16_t v;
 
-	*err = 1;
+  *err = 1;
 
-	if (k + sizeof(v) > bm->len)
-		return (0);
+  if (k + sizeof (v) > bm->len)
+    return (0);
 
-	memcpy(&v, bm->pkt + k, sizeof(v));
+  memcpy (&v, bm->pkt + k, sizeof (v));
 
-	*err = 0;
-        /* no endianness conversions for seccomp: */
-	/* return ntohs(v);*/
-        return v;
+  *err = 0;
+  /* no endianness conversions for seccomp: */
+  /* return ntohs(v);*/
+  return v;
 }
 
 Static u_int32_t
-bpf_mem_ldb(const void *mem, u_int32_t k, int *err)
+bpf_mem_ldb (const void *mem, u_int32_t k, int *err)
 {
-	const struct bpf_mem *bm = mem;
+  const struct bpf_mem *bm = mem;
 
-	*err = 1;
+  *err = 1;
 
-	if (k >= bm->len)
-		return (0);
+  if (k >= bm->len)
+    return (0);
 
-	*err = 0;
-	return bm->pkt[k];
+  *err = 0;
+  return bm->pkt[k];
 }
 
 /*
@@ -128,250 +129,253 @@ bpf_mem_ldb(const void *mem, u_int32_t k, int *err)
  * buflen is the amount of data present
  */
 u_int
-bpf_filter(const struct bpf_insn *pc, const u_char *pkt,
-    u_int wirelen, u_int buflen)
+bpf_filter (const struct bpf_insn *pc, const u_char *pkt,
+            u_int wirelen, u_int buflen)
 {
-	struct bpf_mem bm;
+  struct bpf_mem bm;
 
-	bm.pkt = pkt;
-	bm.len = buflen;
+  bm.pkt = pkt;
+  bm.len = buflen;
 
-	return _bpf_filter(pc, &bpf_mem_ops, &bm, wirelen);
+  return _bpf_filter (pc, &bpf_mem_ops, &bm, wirelen);
 }
 
 u_int
-_bpf_filter(const struct bpf_insn *pc, const struct bpf_ops *ops,
-    const void *pkt, u_int wirelen)
+_bpf_filter (const struct bpf_insn *pc, const struct bpf_ops *ops,
+             const void *pkt, u_int wirelen)
 {
-	u_int32_t A = 0, X = 0;
-	u_int32_t k;
-	int32_t mem[BPF_MEMWORDS];
-	int err;
+  u_int32_t A = 0, X = 0;
+  u_int32_t k;
+  int32_t mem[BPF_MEMWORDS];
+  int err;
 
-	if (pc == NULL) {
-		/*
-		 * No filter means accept all.
-		 */
-		return (u_int)-1;
-	}
+  if (pc == NULL)
+    {
+      /*
+       * No filter means accept all.
+       */
+      return (u_int) -1;
+    }
 
-	memset(mem, 0, sizeof(mem));
+  memset (mem, 0, sizeof (mem));
 
-	--pc;
-	while (1) {
-		++pc;
-		switch (pc->code) {
+  --pc;
+  while (1)
+    {
+      ++pc;
+      switch (pc->code)
+        {
 
-		default:
+        default:
 #ifdef _KERNEL
-			return 0;
+          return 0;
 #else
-			abort();
+          abort ();
 #endif
-		case BPF_RET|BPF_K:
-			return (u_int)pc->k;
+        case BPF_RET | BPF_K:
+          return (u_int) pc->k;
 
-		case BPF_RET|BPF_A:
-			return (u_int)A;
+        case BPF_RET | BPF_A:
+          return (u_int) A;
 
-		case BPF_LD|BPF_W|BPF_ABS:
-			A = ops->ldw(pkt, pc->k, &err);
-			if (err != 0)
-				return 0;
-			continue;
+        case BPF_LD | BPF_W | BPF_ABS:
+          A = ops->ldw (pkt, pc->k, &err);
+          if (err != 0)
+            return 0;
+          continue;
 
-		case BPF_LD|BPF_H|BPF_ABS:
-			A = ops->ldh(pkt, pc->k, &err);
-			if (err != 0)
-				return 0;
-			continue;
+        case BPF_LD | BPF_H | BPF_ABS:
+          A = ops->ldh (pkt, pc->k, &err);
+          if (err != 0)
+            return 0;
+          continue;
 
-		case BPF_LD|BPF_B|BPF_ABS:
-			A = ops->ldb(pkt, pc->k, &err);
-			if (err != 0)
-				return 0;
-			continue;
+        case BPF_LD | BPF_B | BPF_ABS:
+          A = ops->ldb (pkt, pc->k, &err);
+          if (err != 0)
+            return 0;
+          continue;
 
-		case BPF_LD|BPF_W|BPF_LEN:
-			A = wirelen;
-			continue;
+        case BPF_LD | BPF_W | BPF_LEN:
+          A = wirelen;
+          continue;
 
-		case BPF_LDX|BPF_W|BPF_LEN:
-			X = wirelen;
-			continue;
+        case BPF_LDX | BPF_W | BPF_LEN:
+          X = wirelen;
+          continue;
 
-		case BPF_LD|BPF_W|BPF_RND:
-			A = arc4random();
-			continue;
+        case BPF_LD | BPF_W | BPF_RND:
+          A = arc4random ();
+          continue;
 
-		case BPF_LD|BPF_W|BPF_IND:
-			k = X + pc->k;
-			A = ops->ldw(pkt, k, &err);
-			if (err != 0)
-				return 0;
-			continue;
+        case BPF_LD | BPF_W | BPF_IND:
+          k = X + pc->k;
+          A = ops->ldw (pkt, k, &err);
+          if (err != 0)
+            return 0;
+          continue;
 
-		case BPF_LD|BPF_H|BPF_IND:
-			k = X + pc->k;
-			A = ops->ldh(pkt, k, &err);
-			if (err != 0)
-				return 0;
-			continue;
+        case BPF_LD | BPF_H | BPF_IND:
+          k = X + pc->k;
+          A = ops->ldh (pkt, k, &err);
+          if (err != 0)
+            return 0;
+          continue;
 
-		case BPF_LD|BPF_B|BPF_IND:
-			k = X + pc->k;
-			A = ops->ldb(pkt, k, &err);
-			if (err != 0)
-				return 0;
-			continue;
+        case BPF_LD | BPF_B | BPF_IND:
+          k = X + pc->k;
+          A = ops->ldb (pkt, k, &err);
+          if (err != 0)
+            return 0;
+          continue;
 
-		case BPF_LDX|BPF_MSH|BPF_B:
-			X = ops->ldb(pkt, pc->k, &err);
-			if (err != 0)
-				return 0;
-			X &= 0xf;
-			X <<= 2;
-			continue;
+        case BPF_LDX | BPF_MSH | BPF_B:
+          X = ops->ldb (pkt, pc->k, &err);
+          if (err != 0)
+            return 0;
+          X &= 0xf;
+          X <<= 2;
+          continue;
 
-		case BPF_LD|BPF_IMM:
-			A = pc->k;
-			continue;
+        case BPF_LD | BPF_IMM:
+          A = pc->k;
+          continue;
 
-		case BPF_LDX|BPF_IMM:
-			X = pc->k;
-			continue;
+        case BPF_LDX | BPF_IMM:
+          X = pc->k;
+          continue;
 
-		case BPF_LD|BPF_MEM:
-			A = mem[pc->k];
-			continue;
+        case BPF_LD | BPF_MEM:
+          A = mem[pc->k];
+          continue;
 
-		case BPF_LDX|BPF_MEM:
-			X = mem[pc->k];
-			continue;
+        case BPF_LDX | BPF_MEM:
+          X = mem[pc->k];
+          continue;
 
-		case BPF_ST:
-			mem[pc->k] = A;
-			continue;
+        case BPF_ST:
+          mem[pc->k] = A;
+          continue;
 
-		case BPF_STX:
-			mem[pc->k] = X;
-			continue;
+        case BPF_STX:
+          mem[pc->k] = X;
+          continue;
 
-		case BPF_JMP|BPF_JA:
-			pc += pc->k;
-			continue;
+        case BPF_JMP | BPF_JA:
+          pc += pc->k;
+          continue;
 
-		case BPF_JMP|BPF_JGT|BPF_K:
-			pc += (A > pc->k) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JGT | BPF_K:
+          pc += (A > pc->k) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_JMP|BPF_JGE|BPF_K:
-			pc += (A >= pc->k) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JGE | BPF_K:
+          pc += (A >= pc->k) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_JMP|BPF_JEQ|BPF_K:
-			pc += (A == pc->k) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JEQ | BPF_K:
+          pc += (A == pc->k) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_JMP|BPF_JSET|BPF_K:
-			pc += (A & pc->k) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JSET | BPF_K:
+          pc += (A & pc->k) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_JMP|BPF_JGT|BPF_X:
-			pc += (A > X) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JGT | BPF_X:
+          pc += (A > X) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_JMP|BPF_JGE|BPF_X:
-			pc += (A >= X) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JGE | BPF_X:
+          pc += (A >= X) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_JMP|BPF_JEQ|BPF_X:
-			pc += (A == X) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JEQ | BPF_X:
+          pc += (A == X) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_JMP|BPF_JSET|BPF_X:
-			pc += (A & X) ? pc->jt : pc->jf;
-			continue;
+        case BPF_JMP | BPF_JSET | BPF_X:
+          pc += (A & X) ? pc->jt : pc->jf;
+          continue;
 
-		case BPF_ALU|BPF_ADD|BPF_X:
-			A += X;
-			continue;
+        case BPF_ALU | BPF_ADD | BPF_X:
+          A += X;
+          continue;
 
-		case BPF_ALU|BPF_SUB|BPF_X:
-			A -= X;
-			continue;
+        case BPF_ALU | BPF_SUB | BPF_X:
+          A -= X;
+          continue;
 
-		case BPF_ALU|BPF_MUL|BPF_X:
-			A *= X;
-			continue;
+        case BPF_ALU | BPF_MUL | BPF_X:
+          A *= X;
+          continue;
 
-		case BPF_ALU|BPF_DIV|BPF_X:
-			if (X == 0)
-				return 0;
-			A /= X;
-			continue;
+        case BPF_ALU | BPF_DIV | BPF_X:
+          if (X == 0)
+            return 0;
+          A /= X;
+          continue;
 
-		case BPF_ALU|BPF_AND|BPF_X:
-			A &= X;
-			continue;
+        case BPF_ALU | BPF_AND | BPF_X:
+          A &= X;
+          continue;
 
-		case BPF_ALU|BPF_OR|BPF_X:
-			A |= X;
-			continue;
+        case BPF_ALU | BPF_OR | BPF_X:
+          A |= X;
+          continue;
 
-		case BPF_ALU|BPF_LSH|BPF_X:
-			A <<= X;
-			continue;
+        case BPF_ALU | BPF_LSH | BPF_X:
+          A <<= X;
+          continue;
 
-		case BPF_ALU|BPF_RSH|BPF_X:
-			A >>= X;
-			continue;
+        case BPF_ALU | BPF_RSH | BPF_X:
+          A >>= X;
+          continue;
 
-		case BPF_ALU|BPF_ADD|BPF_K:
-			A += pc->k;
-			continue;
+        case BPF_ALU | BPF_ADD | BPF_K:
+          A += pc->k;
+          continue;
 
-		case BPF_ALU|BPF_SUB|BPF_K:
-			A -= pc->k;
-			continue;
+        case BPF_ALU | BPF_SUB | BPF_K:
+          A -= pc->k;
+          continue;
 
-		case BPF_ALU|BPF_MUL|BPF_K:
-			A *= pc->k;
-			continue;
+        case BPF_ALU | BPF_MUL | BPF_K:
+          A *= pc->k;
+          continue;
 
-		case BPF_ALU|BPF_DIV|BPF_K:
-			A /= pc->k;
-			continue;
+        case BPF_ALU | BPF_DIV | BPF_K:
+          A /= pc->k;
+          continue;
 
-		case BPF_ALU|BPF_AND|BPF_K:
-			A &= pc->k;
-			continue;
+        case BPF_ALU | BPF_AND | BPF_K:
+          A &= pc->k;
+          continue;
 
-		case BPF_ALU|BPF_OR|BPF_K:
-			A |= pc->k;
-			continue;
+        case BPF_ALU | BPF_OR | BPF_K:
+          A |= pc->k;
+          continue;
 
-		case BPF_ALU|BPF_LSH|BPF_K:
-			A <<= pc->k;
-			continue;
+        case BPF_ALU | BPF_LSH | BPF_K:
+          A <<= pc->k;
+          continue;
 
-		case BPF_ALU|BPF_RSH|BPF_K:
-			A >>= pc->k;
-			continue;
+        case BPF_ALU | BPF_RSH | BPF_K:
+          A >>= pc->k;
+          continue;
 
-		case BPF_ALU|BPF_NEG:
-			A = -A;
-			continue;
+        case BPF_ALU | BPF_NEG:
+          A = -A;
+          continue;
 
-		case BPF_MISC|BPF_TAX:
-			X = A;
-			continue;
+        case BPF_MISC | BPF_TAX:
+          X = A;
+          continue;
 
-		case BPF_MISC|BPF_TXA:
-			A = X;
-			continue;
-		}
-	}
+        case BPF_MISC | BPF_TXA:
+          A = X;
+          continue;
+        }
+    }
 }
 
 /*
@@ -384,103 +388,107 @@ _bpf_filter(const struct bpf_insn *pc, const struct bpf_ops *ops,
  * Otherwise, a bogus program could easily crash the system.
  */
 int
-bpf_validate(struct bpf_insn *f, int len)
+bpf_validate (struct bpf_insn *f, int len)
 {
-	u_int i, from;
-	struct bpf_insn *p;
+  u_int i, from;
+  struct bpf_insn *p;
 
-	if (len < 1 || len > BPF_MAXINSNS)
-		return 0;
+  if (len < 1 || len > BPF_MAXINSNS)
+    return 0;
 
-	for (i = 0; i < len; ++i) {
-		p = &f[i];
-		switch (BPF_CLASS(p->code)) {
-		/*
-		 * Check that memory operations use valid addresses.
-		 */
-		case BPF_LD:
-		case BPF_LDX:
-			switch (BPF_MODE(p->code)) {
-			case BPF_IMM:
-				break;
-			case BPF_ABS:
-			case BPF_IND:
-			case BPF_MSH:
-				/*
-				 * More strict check with actual packet length
-				 * is done runtime.
-				 */
-				if (p->k >= bpf_maxbufsize)
-					return 0;
-				break;
-			case BPF_MEM:
-				if (p->k >= BPF_MEMWORDS)
-					return 0;
-				break;
-			case BPF_LEN:
-			case BPF_RND:
-				break;
-			default:
-				return 0;
-			}
-			break;
-		case BPF_ST:
-		case BPF_STX:
-			if (p->k >= BPF_MEMWORDS)
-				return 0;
-			break;
-		case BPF_ALU:
-			switch (BPF_OP(p->code)) {
-			case BPF_ADD:
-			case BPF_SUB:
-			case BPF_MUL:
-			case BPF_OR:
-			case BPF_AND:
-			case BPF_LSH:
-			case BPF_RSH:
-			case BPF_NEG:
-				break;
-			case BPF_DIV:
-				/*
-				 * Check for constant division by 0.
-				 */
-				if (BPF_SRC(p->code) == BPF_K && p->k == 0)
-					return 0;
-				break;
-			default:
-				return 0;
-			}
-			break;
-		case BPF_JMP:
-			/*
-			 * Check that jumps are forward, and within
-			 * the code block.
-			 */
-			from = i + 1;
-			switch (BPF_OP(p->code)) {
-			case BPF_JA:
-				if (from + p->k < from || from + p->k >= len)
-					return 0;
-				break;
-			case BPF_JEQ:
-			case BPF_JGT:
-			case BPF_JGE:
-			case BPF_JSET:
-				if (from + p->jt >= len || from + p->jf >= len)
-					return 0;
-				break;
-			default:
-				return 0;
-			}
-			break;
-		case BPF_RET:
-			break;
-		case BPF_MISC:
-			break;
-		default:
-			return 0;
-		}
-
-	}
-	return BPF_CLASS(f[len - 1].code) == BPF_RET;
+  for (i = 0; i < len; ++i)
+    {
+      p = &f[i];
+      switch (BPF_CLASS (p->code))
+        {
+        /*
+         * Check that memory operations use valid addresses.
+         */
+        case BPF_LD:
+        case BPF_LDX:
+          switch (BPF_MODE (p->code))
+            {
+            case BPF_IMM:
+              break;
+            case BPF_ABS:
+            case BPF_IND:
+            case BPF_MSH:
+              /*
+               * More strict check with actual packet length
+               * is done runtime.
+               */
+              if (p->k >= bpf_maxbufsize)
+                return 0;
+              break;
+            case BPF_MEM:
+              if (p->k >= BPF_MEMWORDS)
+                return 0;
+              break;
+            case BPF_LEN:
+            case BPF_RND:
+              break;
+            default:
+              return 0;
+            }
+          break;
+        case BPF_ST:
+        case BPF_STX:
+          if (p->k >= BPF_MEMWORDS)
+            return 0;
+          break;
+        case BPF_ALU:
+          switch (BPF_OP (p->code))
+            {
+            case BPF_ADD:
+            case BPF_SUB:
+            case BPF_MUL:
+            case BPF_OR:
+            case BPF_AND:
+            case BPF_LSH:
+            case BPF_RSH:
+            case BPF_NEG:
+              break;
+            case BPF_DIV:
+              /*
+               * Check for constant division by 0.
+               */
+              if (BPF_SRC (p->code) == BPF_K && p->k == 0)
+                return 0;
+              break;
+            default:
+              return 0;
+            }
+          break;
+        case BPF_JMP:
+          /*
+           * Check that jumps are forward, and within
+           * the code block.
+           */
+          from = i + 1;
+          switch (BPF_OP (p->code))
+            {
+            case BPF_JA:
+              if (from + p->k < from || from + p->k >= len)
+                return 0;
+              break;
+            case BPF_JEQ:
+            case BPF_JGT:
+            case BPF_JGE:
+            case BPF_JSET:
+              if (from + p->jt >= len || from + p->jf >= len)
+                return 0;
+              break;
+            default:
+              return 0;
+            }
+          break;
+        case BPF_RET:
+          break;
+        case BPF_MISC:
+          break;
+        default:
+          return 0;
+        }
+    }
+  return BPF_CLASS (f[len - 1].code) == BPF_RET;
 }
