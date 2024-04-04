@@ -37,4 +37,9 @@ update-syscall-versions:
 	$(if $(KERNEL_CHECKOUT),, $(error KERNEL_CHECKOUT is not defined))
 	$(abs_srcdir)/src/syscall-versions/generate-all-syscalls.sh $(KERNEL_CHECKOUT)
 
+clang-format:
+# do not format files that were copied into the source directory.
+	git ls-files src tests | grep -E "\\.[hc]" | grep -v src/errnos.h | grep -v src/syscall-versions | xargs clang-format -style=file -i
+
+
 .PHONY: update-syscall-versions
