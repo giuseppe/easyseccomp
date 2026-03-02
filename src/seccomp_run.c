@@ -19,7 +19,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <error.h>
+#include <err.h>
 #include <errno.h>
 #include <syscall.h>
 #include <linux/filter.h>
@@ -49,21 +49,21 @@ main (int argc, char *argv[])
   int r;
 
   if (argc < 3)
-    error (EXIT_FAILURE, 0, "usage: %s seccomp.bpf COMMAND ...", argv[0]);
+    errx (EXIT_FAILURE, "usage: %s seccomp.bpf COMMAND ...", argv[0]);
 
   fd = open (argv[1], O_RDONLY | O_CLOEXEC);
   if (fd < 0)
-    error (EXIT_FAILURE, errno, "open `%s`", argv[1]);
+    err (EXIT_FAILURE, "open `%s`", argv[1]);
 
   r = fstat (fd, &st);
   if (r < 0)
-    error (EXIT_FAILURE, errno, "fstat `%s", argv[1]);
+    err (EXIT_FAILURE, "fstat `%s", argv[1]);
 
   if (st.st_size > 0)
     {
       addr = mmap (NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
       if (addr == MAP_FAILED)
-        error (EXIT_FAILURE, errno, "mmap");
+        err (EXIT_FAILURE, "mmap");
       size = st.st_size;
     }
   else
@@ -73,13 +73,13 @@ main (int argc, char *argv[])
         {
           addr = realloc (addr, size + 4096);
           if (addr == NULL)
-            error (EXIT_FAILURE, errno, "malloc");
+            err (EXIT_FAILURE, "malloc");
 
           do
             r = read (fd, addr + size, 4096);
           while (r < 0 && errno == EINTR);
           if (r < 0)
-            error (EXIT_FAILURE, errno, "read");
+            err (EXIT_FAILURE, "read");
           if (r == 0)
             break;
           size += r;
@@ -95,7 +95,7 @@ main (int argc, char *argv[])
       if (r == 0)
         r = syscall_seccomp (SECCOMP_SET_MODE_FILTER, 0, &seccomp_filter);
       if (r < 0)
-        error (EXIT_FAILURE, errno, "seccomp");
+        err (EXIT_FAILURE, "seccomp");
     }
 
   if (st.st_size == 0)
@@ -104,7 +104,7 @@ main (int argc, char *argv[])
     {
       r = munmap (addr, st.st_size);
       if (r < 0)
-        error (EXIT_FAILURE, errno, "munmap");
+        err (EXIT_FAILURE, "munmap");
     }
 
   for (argc = 2; argv[argc]; argc++)

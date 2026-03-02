@@ -21,7 +21,6 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <error.h>
 #include <stdlib.h>
 #include <argp.h>
 
