@@ -457,9 +457,9 @@ resolve_syscall (struct easy_seccomp_ctx_s *ctx, const char *name, int *syscall)
 
   strcpy (buf, name);
 
-  arch_sep = strchr (name, '@');
+  arch_sep = strchr (buf, '@');
   if (arch_sep == NULL)
-    *syscall = seccomp_syscall_resolve_name (name);
+    *syscall = seccomp_syscall_resolve_name (buf);
   else
     {
       int ret, arch_token;
@@ -470,7 +470,7 @@ resolve_syscall (struct easy_seccomp_ctx_s *ctx, const char *name, int *syscall)
       if (ret < 0)
         return ret;
 
-      *syscall = seccomp_syscall_resolve_name_arch (arch_token, name);
+      *syscall = seccomp_syscall_resolve_name_arch (arch_token, buf);
     }
 
   if (*syscall == __NR_SCMP_ERROR)
