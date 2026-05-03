@@ -17,8 +17,8 @@ if test x"$ac_cv_prog_LEX" = "x"; then
       AC_MSG_ERROR([lex is required])
 fi
 
-if test x"$ac_cv_prog_YACC" = "x"; then
-      AC_MSG_ERROR([yacc is required])
+if test x"$ac_cv_prog_YACC" != "xbison -y"; then
+      AC_MSG_ERROR([bison is required])
 fi
 
 dnl libseccomp
@@ -38,6 +38,10 @@ AC_TYPE_SIZE_T
 
 AC_FUNC_ERROR_AT_LINE
 AC_CHECK_FUNCS([memset strdup])
+
+AC_SEARCH_LIBS([argp_parse], [argp], [], [
+  AC_MSG_ERROR([unable to find the argp_parse() function])
+])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

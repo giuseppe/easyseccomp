@@ -21,7 +21,6 @@
 #include "generator.h"
 
 #include <string.h>
-#include <error.h>
 #include <errno.h>
 
 char *

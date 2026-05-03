@@ -20,7 +20,7 @@
 
 #include <unistd.h>
 #include <stdio.h>
-#include <error.h>
+#include <err.h>
 #include <stdlib.h>
 #include <inttypes.h>
 #include <argp.h>
@@ -157,7 +157,7 @@ main (int argc, char **argv)
 
   easyseccomp_ctx = easy_seccomp_make_ctx ();
   if (easyseccomp_ctx == NULL)
-    error (EXIT_FAILURE, errno, "create context");
+    err (EXIT_FAILURE, "create context");
 
   context.ctx = easyseccomp_ctx;
   context.input = stdin;
@@ -166,7 +166,7 @@ main (int argc, char **argv)
   argp_parse (&argp, argc, argv, 0, 0, &context);
 
   if (isatty (fileno (context.output)) && getenv ("FORCE_TTY") == NULL)
-    error (EXIT_FAILURE, 0, "I refuse to write to a tty.  Redirect the output");
+    errx (EXIT_FAILURE, "I refuse to write to a tty.  Redirect the output");
 
   ret = easy_seccomp_compile (context.ctx, context.input, context.output);
   if (ret < 0)

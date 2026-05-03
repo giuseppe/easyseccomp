@@ -21,7 +21,6 @@
 #include "generator.h"
 #include "syscall-versions/syscall-versions.h"
 #include "errnos.h"
-#include "error.h"
 #include "libeasyseccomp_a-parser.h"
 #include "libeasyseccomp_a-lexer.h"
 #include <linux/types.h>
